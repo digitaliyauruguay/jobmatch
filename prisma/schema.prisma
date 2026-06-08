@@ -1,0 +1,231 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+}
+
+enum Role {
+  WORKER
+  COMPANY
+  ADMIN
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+  BLOCKED
+}
+
+enum Department {
+  MONTEVIDEO
+  CANELONES
+  MALDONADO
+  ROCHA
+  TREINTA_Y_TRES
+  CERRO_LARGO
+  RIVERA
+  ARTIGAS
+  SALTO
+  PAYSANDU
+  RIO_NEGRO
+  SORIANO
+  COLONIA
+  SAN_JOSE
+  FLORES
+  FLORIDA
+  DURAZNO
+  TACUAREMBO
+  LAVALLEJA
+}
+
+enum Modality {
+  PRESENTIAL
+  REMOTE
+  HYBRID
+}
+
+enum JobType {
+  FULL_TIME
+  PART_TIME
+  TEMPORARY
+  PROJECT
+}
+
+enum JobStatus {
+  ACTIVE
+  BLOCKED
+  DELETED
+}
+
+enum ApplicationOrigin {
+  SELF
+  INDICATED
+}
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ObservationTarget {
+  USER
+  JOB
+}
+
+enum Availability {
+  IMMEDIATE
+  ONE_WEEK
+  TWO_WEEKS
+  ONE_MONTH
+}
+
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  password  String
+  role      Role
+  status    UserStatus @default(PENDING)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  workerProfile     WorkerProfile?
+  companyProfile    CompanyProfile?
+  notifications     Notification[]
+  observations      Observation[]  @relation("ObservationTarget")
+  adminObservations Observation[]  @relation("ObservationAdmin")
+}
+
+model Category {
+  id   String @id @default(cuid())
+  name String @unique
+
+  workerCategories  WorkerCategory[]
+  companyCategories CompanyCategory[]
+  jobs              Job[]
+}
+
+model WorkerProfile {
+  id           String       @id @default(cuid())
+  firstName    String
+  lastName     String
+  photo        String?
+  department   Department
+  phone        String
+  description  String?
+  availability Availability
+  cvUrl        String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  categories   WorkerCategory[]
+  applications Application[]
+}
+
+model WorkerCategory {
+  workerId   String
+  categoryId String
+
+  worker   WorkerProfile @relation(fields: [workerId], references: [id])
+  category Category      @relation(fields: [categoryId], references: [id])
+
+  @@id([workerId, categoryId])
+}
+
+model CompanyProfile {
+  id          String     @id @default(cuid())
+  name        String
+  logo        String?
+  department  Department
+  contact     String
+  description String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  categories CompanyCategory[]
+  jobs       Job[]
+}
+
+model CompanyCategory {
+  companyId  String
+  categoryId String
+
+  company  CompanyProfile @relation(fields: [companyId], references: [id])
+  category Category       @relation(fields: [categoryId], references: [id])
+
+  @@id([companyId, categoryId])
+}
+
+model Job {
+  id          String     @id @default(cuid())
+  title       String
+  description String
+  department  Department
+  modality    Modality
+  jobType     JobType
+  salary      String?
+  status      JobStatus  @default(ACTIVE)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  companyId String
+  company   CompanyProfile @relation(fields: [companyId], references: [id])
+
+  applications Application[]
+  observations Observation[]
+}
+
+model Application {
+  id        String            @id @default(cuid())
+  origin    ApplicationOrigin
+  status    ApplicationStatus @default(PENDING)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  jobId    String
+  job      Job           @relation(fields: [jobId], references: [id])
+
+  workerId String
+  worker   WorkerProfile @relation(fields: [workerId], references: [id])
+
+  @@unique([jobId, workerId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+}
+
+model Observation {
+  id         String            @id @default(cuid())
+  message    String
+  targetType ObservationTarget
+  createdAt  DateTime          @default(now())
+
+  targetUserId String?
+  targetUser   User?   @relation("ObservationTarget", fields: [targetUserId], references: [id])
+
+  targetJobId String?
+  targetJob   Job?    @relation(fields: [targetJobId], references: [id])
+
+  adminId String
+  admin   User   @relation("ObservationAdmin", fields: [adminId], references: [id])
+}
