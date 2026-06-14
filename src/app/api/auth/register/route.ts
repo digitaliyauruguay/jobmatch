@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
 
     // Crear usuario y perfil en una sola operación
     if (role === "WORKER") {
-      const { firstName, lastName, department, phone, description, availability, categoryIds } = profile;
+      const { firstName, lastName, department, phone, description, availability, photo, cvUrl, categoryIds } = profile;
 
       if (!firstName || !lastName || !department || !phone || !availability || !categoryIds?.length) {
         return NextResponse.json(
@@ -61,6 +61,8 @@ export async function POST(req: NextRequest) {
               phone,
               description: description || null,
               availability,
+              photo: photo || null,
+              cvUrl: cvUrl || null,
               categories: {
                 create: categoryIds.map((id: string) => ({ categoryId: id })),
               },
@@ -71,7 +73,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (role === "COMPANY") {
-      const { name, department, contact, description, categoryIds } = profile;
+      const { name, department, contact, description, logo, categoryIds } = profile;
 
       if (!name || !department || !contact || !categoryIds?.length) {
         return NextResponse.json(
@@ -92,6 +94,7 @@ export async function POST(req: NextRequest) {
               department,
               contact,
               description: description || null,
+              logo: logo || null,
               categories: {
                 create: categoryIds.map((id: string) => ({ categoryId: id })),
               },

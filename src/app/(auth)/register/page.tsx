@@ -12,6 +12,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
+import FileUpload from "@/components/ui/FileUpload";
 
 type Category = {
   id: string;
@@ -61,12 +62,15 @@ export default function RegisterPage() {
   const [phone, setPhone] = useState("");
   const [description, setDescription] = useState("");
   const [availability, setAvailability] = useState("");
+  const [photo, setPhoto] = useState("");
+  const [cvUrl, setCvUrl] = useState("");
 
   // Datos empresa
   const [companyName, setCompanyName] = useState("");
   const [companyDepartment, setCompanyDepartment] = useState("");
   const [contact, setContact] = useState("");
   const [companyDescription, setCompanyDescription] = useState("");
+  const [logo, setLogo] = useState("");
 
   useEffect(() => {
     fetch("/api/categories")
@@ -117,28 +121,34 @@ export default function RegisterPage() {
   const handleRegister = async () => {
   if (!validateStep3()) return;
 
+  console.log("photo:", photo);
+  console.log("cvUrl:", cvUrl);
+  console.log("logo:", logo);
   setLoading(true);
   setError("");
 
   try {
     const profileData =
-      role === "WORKER"
-        ? {
-            firstName,
-            lastName,
-            department,
-            phone,
-            description,
-            availability,
-            categoryIds: selectedCategories,
-          }
-        : {
-            name: companyName,
-            department: companyDepartment,
-            contact,
-            description: companyDescription,
-            categoryIds: selectedCategories,
-          };
+  role === "WORKER"
+    ? {
+        firstName,
+        lastName,
+        department,
+        phone,
+        description,
+        availability,
+        photo: photo || null,
+        cvUrl: cvUrl || null,
+        categoryIds: selectedCategories,
+      }
+    : {
+        name: companyName,
+        department: companyDepartment,
+        contact,
+        description: companyDescription,
+        logo: logo || null,
+        categoryIds: selectedCategories,
+      };
 
     const res = await fetch("/api/auth/register", {
       method: "POST",
@@ -310,7 +320,18 @@ export default function RegisterPage() {
                       placeholder="Contanos algo sobre vos..."
                     />
                   </div>
+                  <FileUpload
+                    type="photo"
+                    label="Foto de perfil (opcional)"
+                    onUpload={(url) => setPhoto(url)}
+                  />
+                  <FileUpload
+                    type="cv"
+                    label="CV en PDF (opcional)"
+                    onUpload={(url) => setCvUrl(url)}
+                  />
                 </>
+                
               )}
 
               {role === "COMPANY" && (
@@ -357,6 +378,11 @@ export default function RegisterPage() {
                       placeholder="Contanos sobre tu empresa..."
                     />
                   </div>
+                  <FileUpload
+                    type="logo"
+                    label="Logo de la empresa (opcional)"
+                    onUpload={(url) => setLogo(url)}
+                  />
                 </>
               )}
 
