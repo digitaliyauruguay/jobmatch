@@ -197,11 +197,10 @@ export default function CompanyDashboard() {
                 <button
                   key={job.id}
                   onClick={() => handleSelectJob(job.id)}
-                  className={`text-left bg-white rounded-lg border p-4 transition-colors ${
-                    selectedJob === job.id
-                      ? "border-blue-500 shadow-sm"
-                      : "border-gray-200 hover:border-gray-400"
-                  }`}
+                  style={{
+  border: selectedJob === job.id ? "1px solid #3b82f6" : "1px solid #e5e7eb",
+}}
+className="text-left bg-white rounded-lg p-4 transition-colors"
                 >
                   <p className="font-medium text-sm">{job.title}</p>
                   <p className="text-xs text-gray-500 mt-1">
@@ -236,21 +235,23 @@ export default function CompanyDashboard() {
               <div className="flex gap-2 mb-4">
                 <button
                   onClick={() => setActiveTab("SELF")}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    activeTab === "SELF"
-                      ? "bg-blue-600 text-white"
-                      : "bg-white border border-gray-200 text-gray-600 hover:border-gray-400"
-                  }`}
+                  style={{
+  backgroundColor: activeTab === "SELF" ? "#2563eb" : "white",
+  color: activeTab === "SELF" ? "white" : "#4b5563",
+  border: activeTab === "SELF" ? "none" : "1px solid #e5e7eb",
+}}
+className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                 >
                   Postulaciones recibidas
                 </button>
                 <button
                   onClick={() => setActiveTab("INDICATED")}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    activeTab === "INDICATED"
-                      ? "bg-blue-600 text-white"
-                      : "bg-white border border-gray-200 text-gray-600 hover:border-gray-400"
-                  }`}
+                  style={{
+  backgroundColor: activeTab === "INDICATED" ? "#2563eb" : "white",
+  color: activeTab === "INDICATED" ? "white" : "#4b5563",
+  border: activeTab === "INDICATED" ? "none" : "1px solid #e5e7eb",
+}}
+className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                 >
                   Indicados por mí
                 </button>
@@ -303,13 +304,13 @@ export default function CompanyDashboard() {
                           )}
                         </div>
                         <div className="flex flex-col items-end gap-2">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            app.status === "PENDING"
-                              ? "bg-yellow-50 text-yellow-700"
-                              : app.status === "APPROVED"
-                              ? "bg-green-50 text-green-700"
-                              : "bg-red-50 text-red-700"
-                          }`}>
+                          <span
+  style={{
+    backgroundColor: app.status === "PENDING" ? "#fefce8" : app.status === "APPROVED" ? "#f0fdf4" : "#fef2f2",
+    color: app.status === "PENDING" ? "#a16207" : app.status === "APPROVED" ? "#15803d" : "#b91c1c",
+  }}
+  className="px-2 py-1 rounded-full text-xs font-medium"
+>
                             {app.status === "PENDING" && "Pendiente"}
                             {app.status === "APPROVED" && "Aprobado"}
                             {app.status === "REJECTED" && "Rechazado"}

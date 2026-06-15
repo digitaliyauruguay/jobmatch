@@ -93,11 +93,12 @@ export default function AdminUsersPage() {
             <button
               key={s}
               onClick={() => setFilter(s)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filter === s
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-gray-600 border border-gray-200 hover:border-gray-400"
-              }`}
+              style={{
+  backgroundColor: filter === s ? "#2563eb" : "white",
+  color: filter === s ? "white" : "#4b5563",
+  border: filter === s ? "none" : "1px solid #e5e7eb",
+}}
+className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
             >
               {s === "PENDING" && "Pendientes"}
               {s === "ACTIVE" && "Activos"}
@@ -130,11 +131,13 @@ export default function AdminUsersPage() {
                     <td className="px-4 py-3 font-medium">{getName(user)}</td>
                     <td className="px-4 py-3 text-gray-600">{user.email}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        user.role === "WORKER"
-                          ? "bg-blue-50 text-blue-700"
-                          : "bg-purple-50 text-purple-700"
-                      }`}>
+                      <span
+  style={{
+    backgroundColor: user.role === "WORKER" ? "#eff6ff" : "#faf5ff",
+    color: user.role === "WORKER" ? "#1d4ed8" : "#7e22ce",
+  }}
+  className="px-2 py-1 rounded-full text-xs font-medium"
+>
                         {user.role === "WORKER" ? "Trabajador" : "Empresa"}
                       </span>
                     </td>

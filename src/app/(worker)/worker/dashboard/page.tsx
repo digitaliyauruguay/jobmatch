@@ -11,6 +11,7 @@
 import { useState, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
 import NotificationBell from "@/components/ui/NotificationBell";
+import Link from "next/link";
 
 type Job = {
   id: string;
@@ -172,19 +173,21 @@ export default function WorkerDashboard() {
           <h1 className="text-xl font-medium">JobMatch</h1>
           <div className="flex items-center gap-4">
           <div className="flex items-center gap-3">
-            {profile?.photo ? (
-              <img
-                src={profile.photo}
-                alt="Foto de perfil"
-                className="w-8 h-8 rounded-full object-cover border border-gray-200"
-              />
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-sm font-medium">
-                {profile?.firstName?.[0] || session?.user?.email?.[0]?.toUpperCase()}
-              </div>
-            )}
-            <span className="text-sm text-gray-600">{profile?.firstName || session?.user?.email}</span>
-          </div>
+  {profile?.photo ? (
+    <img
+      src={profile.photo}
+      alt="Foto de perfil"
+      className="w-8 h-8 rounded-full object-cover border border-gray-200"
+    />
+  ) : (
+    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-sm font-medium">
+      {profile?.firstName?.[0] || session?.user?.email?.[0]?.toUpperCase()}
+    </div>
+  )}
+  <Link href="/worker/profile/edit" className="text-sm text-gray-600 hover:text-blue-600">
+    {profile?.firstName || session?.user?.email}
+  </Link>
+</div>
           <NotificationBell />
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
@@ -316,11 +319,12 @@ export default function WorkerDashboard() {
                       <button
   onClick={() => !appliedJobs.includes(job.id) && handleApply(job.id)}
   disabled={applying === job.id || appliedJobs.includes(job.id)}
-  className={`w-full py-2 rounded-lg text-sm font-medium transition-colors ${
-    appliedJobs.includes(job.id)
-      ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-      : "bg-blue-600 text-white hover:bg-blue-700"
-  } disabled:opacity-50`}
+  style={{
+    backgroundColor: appliedJobs.includes(job.id) ? "#f3f4f6" : "#2563eb",
+    color: appliedJobs.includes(job.id) ? "#6b7280" : "white",
+    cursor: appliedJobs.includes(job.id) ? "not-allowed" : "pointer",
+  }}
+  className="w-full py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
 >
   {applying === job.id
     ? "Postulando..."
@@ -351,25 +355,27 @@ export default function WorkerDashboard() {
           <>
             <div className="flex gap-2 mb-6">
               <button
-                onClick={() => setAppTab("SELF")}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  appTab === "SELF"
-                    ? "bg-blue-600 text-white"
-                    : "bg-white border border-gray-200 text-gray-600 hover:border-gray-400"
-                }`}
-              >
-                Mis postulaciones
-              </button>
-              <button
-                onClick={() => setAppTab("INDICATED")}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  appTab === "INDICATED"
-                    ? "bg-blue-600 text-white"
-                    : "bg-white border border-gray-200 text-gray-600 hover:border-gray-400"
-                }`}
-              >
-                Indicaciones recibidas
-              </button>
+  onClick={() => setAppTab("SELF")}
+  style={{
+    backgroundColor: appTab === "SELF" ? "#2563eb" : "white",
+    color: appTab === "SELF" ? "white" : "#4b5563",
+    border: appTab === "SELF" ? "none" : "1px solid #e5e7eb",
+  }}
+  className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+>
+  Mis postulaciones
+</button>
+<button
+  onClick={() => setAppTab("INDICATED")}
+  style={{
+    backgroundColor: appTab === "INDICATED" ? "#2563eb" : "white",
+    color: appTab === "INDICATED" ? "white" : "#4b5563",
+    border: appTab === "INDICATED" ? "none" : "1px solid #e5e7eb",
+  }}
+  className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+>
+  Indicaciones recibidas
+</button>
             </div>
 
             {loadingApps ? (

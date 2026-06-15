@@ -193,17 +193,18 @@ export default function CompanyWorkersPage() {
                     )}
 
                     <button
-                      onClick={() => handleIndicate(worker.id)}
-                      disabled={
-                        indicating === worker.id ||
-                        indicated.includes(`${worker.id}-${selectedJob[worker.id]}`)
-                      }
-                      className={`w-full py-2 rounded-lg text-sm font-medium transition-colors ${
-                        indicated.includes(`${worker.id}-${selectedJob[worker.id]}`)
-                          ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                          : "bg-blue-600 text-white hover:bg-blue-700"
-                      } disabled:opacity-50`}
-                    >
+  onClick={() => handleIndicate(worker.id)}
+  disabled={
+    indicating === worker.id ||
+    indicated.includes(`${worker.id}-${selectedJob[worker.id]}`)
+  }
+  style={{
+    backgroundColor: indicated.includes(`${worker.id}-${selectedJob[worker.id]}`) ? "#f3f4f6" : "#2563eb",
+    color: indicated.includes(`${worker.id}-${selectedJob[worker.id]}`) ? "#6b7280" : "white",
+    cursor: indicated.includes(`${worker.id}-${selectedJob[worker.id]}`) ? "not-allowed" : "pointer",
+  }}
+  className="w-full py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+>
                       {indicating === worker.id
                         ? "Indicando..."
                         : indicated.includes(`${worker.id}-${selectedJob[worker.id]}`)

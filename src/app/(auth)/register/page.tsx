@@ -399,11 +399,11 @@ export default function RegisterPage() {
                       key={cat.id}
                       type="button"
                       onClick={() => toggleCategory(cat.id)}
-                      className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                        selectedCategories.includes(cat.id)
-                          ? "bg-blue-600 text-white"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      }`}
+                      style={{
+  backgroundColor: selectedCategories.includes(cat.id) ? "#2563eb" : "#f3f4f6",
+  color: selectedCategories.includes(cat.id) ? "white" : "#374151",
+}}
+className="px-3 py-1.5 rounded-lg text-sm transition-colors"
                     >
                       {cat.name}
                     </button>

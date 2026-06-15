@@ -89,11 +89,12 @@ export default function AdminJobsPage() {
             <button
               key={s}
               onClick={() => setFilter(s)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filter === s
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-gray-600 border border-gray-200 hover:border-gray-400"
-              }`}
+              style={{
+  backgroundColor: filter === s ? "#2563eb" : "white",
+  color: filter === s ? "white" : "#4b5563",
+  border: filter === s ? "none" : "1px solid #e5e7eb",
+}}
+className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
             >
               {s === "ACTIVE" && "Activas"}
               {s === "BLOCKED" && "Bloqueadas"}
