@@ -69,6 +69,7 @@ const DEPARTMENT_LABELS: Record<string, string> = {
 export default function WorkerDashboard() {
   const { data: session } = useSession();
   const [activeSection, setActiveSection] = useState<"jobs" | "applications">("jobs");
+  const [profile, setProfile] = useState<{ firstName: string; photo: string | null; cvUrl: string | null } | null>(null);
 
   // Ofertas
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -104,6 +105,12 @@ export default function WorkerDashboard() {
     setLoadingJobs(false);
   };
 
+  const fetchProfile = async () => {
+  const res = await fetch("/api/workers/me");
+  const data = await res.json();
+  setProfile(data);
+};
+
   const fetchApplications = async () => {
     setLoadingApps(true);
     const res = await fetch("/api/applications/me");
@@ -123,6 +130,7 @@ export default function WorkerDashboard() {
   fetchCategories();
   fetchJobs();
   fetchApplications();
+  fetchProfile();
 }, []);
 
   useEffect(() => {
@@ -163,14 +171,27 @@ export default function WorkerDashboard() {
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-xl font-medium">JobMatch</h1>
           <div className="flex items-center gap-4">
-  <span className="text-sm text-gray-600">{session?.user?.email}</span>
-  <NotificationBell />
-  <button
-    onClick={() => signOut({ callbackUrl: "/login" })}
-    className="text-sm text-gray-500 hover:text-gray-900"
-  >
-    Salir
-  </button>
+          <div className="flex items-center gap-3">
+            {profile?.photo ? (
+              <img
+                src={profile.photo}
+                alt="Foto de perfil"
+                className="w-8 h-8 rounded-full object-cover border border-gray-200"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-sm font-medium">
+                {profile?.firstName?.[0] || session?.user?.email?.[0]?.toUpperCase()}
+              </div>
+            )}
+            <span className="text-sm text-gray-600">{profile?.firstName || session?.user?.email}</span>
+          </div>
+          <NotificationBell />
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="text-sm text-gray-500 hover:text-gray-900"
+          >
+            Salir
+          </button>
 </div>
         </div>
       </nav>
@@ -316,6 +337,16 @@ export default function WorkerDashboard() {
         )}
 
         {/* Sección postulaciones */}
+        {activeSection === "applications" && profile?.cvUrl && (
+  <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
+    <p className="text-sm font-medium text-gray-900 mb-3">Tu CV</p>
+    <iframe
+      src={`https://docs.google.com/viewer?url=${encodeURIComponent(profile.cvUrl)}&embedded=true`}
+      className="w-full h-96 rounded-lg border border-gray-100"
+      title="Tu CV"
+    />
+  </div>
+)}
         {activeSection === "applications" && (
           <>
             <div className="flex gap-2 mb-6">

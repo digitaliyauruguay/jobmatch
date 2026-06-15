@@ -79,6 +79,7 @@ export default function CompanyDashboard() {
   const [loadingJobs, setLoadingJobs] = useState(true);
   const [loadingApps, setLoadingApps] = useState(false);
   const [activeTab, setActiveTab] = useState<"SELF" | "INDICATED">("SELF");
+  const [profile, setProfile] = useState<{ name: string; logo: string | null } | null>(null);
 
   const fetchJobs = async () => {
     setLoadingJobs(true);
@@ -86,6 +87,12 @@ export default function CompanyDashboard() {
     const data = await res.json();
     setJobs(data);
     setLoadingJobs(false);
+  };
+
+  const fetchProfile = async () => {
+  const res = await fetch("/api/companies/me");
+  const data = await res.json();
+  setProfile(data);
   };
 
   const fetchApplications = async (jobId: string) => {
@@ -96,9 +103,10 @@ export default function CompanyDashboard() {
     setLoadingApps(false);
   };
 
-  useEffect(() => {
-    fetchJobs();
-  }, []);
+ useEffect(() => {
+  fetchJobs();
+  fetchProfile();
+}, []);
 
   const handleSelectJob = (jobId: string) => {
     setSelectedJob(jobId);
@@ -130,7 +138,20 @@ export default function CompanyDashboard() {
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-xl font-medium">JobMatch — Empresa</h1>
           <div className="flex items-center gap-4">
-  <span className="text-sm text-gray-600">{session?.user?.email}</span>
+  <div className="flex items-center gap-3">
+  {profile?.logo ? (
+    <img
+      src={profile.logo}
+      alt="Logo de empresa"
+      className="w-8 h-8 rounded-full object-cover border border-gray-200"
+    />
+  ) : (
+    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-sm font-medium">
+      {profile?.name?.[0] || session?.user?.email?.[0]?.toUpperCase()}
+    </div>
+  )}
+  <span className="text-sm text-gray-600">{profile?.name || session?.user?.email}</span>
+</div>
   <NotificationBell />
   <Link
   href="/company/workers"

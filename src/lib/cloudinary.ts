@@ -19,11 +19,15 @@ export default cloudinary;
 export async function uploadFile(
   file: string,
   folder: string,
-  resourceType: "image" | "raw" = "image"
+  resourceType: "image" | "raw" = "image",
 ) {
   const result = await cloudinary.uploader.upload(file, {
     folder: `jobmatch/${folder}`,
     resource_type: resourceType,
+    use_filename: true,
+    unique_filename: true,
+    overwrite: false,
   });
+
   return result.secure_url;
 }
