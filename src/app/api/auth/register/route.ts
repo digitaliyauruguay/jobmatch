@@ -15,11 +15,19 @@ export async function POST(req: NextRequest) {
     const { email, password, role, profile } = await req.json();
 
     if (!email || !password || !role || !profile) {
-      return NextResponse.json(
-        { error: "Faltan datos requeridos" },
-        { status: 400 }
-      );
-    }
+  return NextResponse.json(
+    { error: "Faltan datos requeridos" },
+    { status: 400 }
+  );
+}
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/;
+if (!emailRegex.test(email)) {
+  return NextResponse.json(
+    { error: "El formato del email no es válido" },
+    { status: 400 }
+  );
+}
 
     if (role !== "WORKER" && role !== "COMPANY") {
       return NextResponse.json({ error: "Rol inválido" }, { status: 400 });

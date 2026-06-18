@@ -31,12 +31,12 @@ export default function AdminJobsPage() {
   const [observationMessage, setObservationMessage] = useState("");
 
   const fetchJobs = async (status: string) => {
-    setLoading(true);
-    const res = await fetch(`/api/admin/jobs?status=${status}`);
-    const data = await res.json();
-    setJobs(data);
-    setLoading(false);
-  };
+  setLoading(true);
+  const res = await fetch(`/api/admin/jobs?status=${status}`);
+  const data = await res.json();
+  setJobs(Array.isArray(data) ? data : []);
+  setLoading(false);
+};
 
   useEffect(() => {
     fetchJobs(filter);

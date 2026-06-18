@@ -9,7 +9,7 @@
 "use client";
 
 import NotificationBell from "@/components/ui/NotificationBell";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 
 export default function AdminDashboard() {
@@ -23,6 +23,12 @@ export default function AdminDashboard() {
           <div className="flex items-center gap-4">
   <span className="text-sm text-gray-600">{session?.user?.email}</span>
   <NotificationBell />
+  <button
+    onClick={() => signOut({ callbackUrl: "/login" })}
+    className="text-sm text-gray-500 hover:text-gray-900"
+  >
+    Salir
+  </button>
 </div>
         </div>
       </nav>

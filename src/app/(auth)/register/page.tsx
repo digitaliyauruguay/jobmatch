@@ -84,18 +84,38 @@ export default function RegisterPage() {
     );
   };
 
-  const validateStep2 = () => {
-    if (!email || !password) {
-      setError("Completá todos los campos");
-      return false;
-    }
-    if (password.length < 8) {
-      setError("La contraseña debe tener al menos 8 caracteres");
-      return false;
-    }
-    setError("");
-    return true;
-  };
+  const validateStep2 = async () => {
+  if (!email || !password) {
+    setError("Completá todos los campos");
+    return false;
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/;
+  if (!emailRegex.test(email)) {
+    setError("Ingresá un email válido");
+    return false;
+  }
+
+  if (password.length < 8) {
+    setError("La contraseña debe tener al menos 8 caracteres");
+    return false;
+  }
+
+  const res = await fetch("/api/auth/check-email", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  const data = await res.json();
+
+  if (data.exists) {
+    setError("Ya existe una cuenta con ese email");
+    return false;
+  }
+
+  setError("");
+  return true;
+};
 
   const validateStep3 = () => {
     if (selectedCategories.length === 0) {
@@ -240,11 +260,11 @@ export default function RegisterPage() {
                   Atrás
                 </button>
                 <button
-                  onClick={() => { if (validateStep2()) setStep(3); }}
-                  className="flex-1 bg-blue-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-blue-700 transition-colors"
-                >
-                  Continuar
-                </button>
+  onClick={async () => { if (await validateStep2()) setStep(3); }}
+  className="flex-1 bg-blue-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-blue-700 transition-colors"
+>
+  Continuar
+</button>
               </div>
             </div>
           )}

@@ -34,12 +34,12 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
 
   const fetchUsers = async (status: string) => {
-    setLoading(true);
-    const res = await fetch(`/api/admin/users?status=${status}`);
-    const data = await res.json();
-    setUsers(data);
-    setLoading(false);
-  };
+  setLoading(true);
+  const res = await fetch(`/api/admin/users?status=${status}`);
+  const data = await res.json();
+  setUsers(Array.isArray(data) ? data : []);
+  setLoading(false);
+};
 
   useEffect(() => {
     fetchUsers(filter);
