@@ -192,7 +192,9 @@ const handleCompleteJob = async (jobId: string) => {
       {profile?.name?.[0] || session?.user?.email?.[0]?.toUpperCase()}
     </div>
   )}
-  <span className="text-sm text-gray-600">{profile?.name || session?.user?.email}</span>
+  <Link href="/company/profile/edit" className="text-sm text-gray-600 hover:text-blue-600">
+  {profile?.name || session?.user?.email}
+</Link>
 </div>
   <NotificationBell />
   <Link
