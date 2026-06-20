@@ -3,8 +3,10 @@
  * Qué hace: Maneja operaciones sobre una oferta específica.
  * GET - devuelve el detalle completo de una oferta, accesible públicamente.
  * PUT - actualiza una oferta existente, solo la empresa dueña puede hacerlo.
+ * Notifica a los postulados en estado PENDING sobre la modificación.
  * DELETE - elimina lógicamente una oferta cambiando su estado a DELETED,
- * solo la empresa dueña o el admin pueden hacerlo.
+ * solo la empresa dueña o el admin pueden hacerlo. Notifica a los
+ * postulados en estado PENDING sobre la eliminación.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -98,6 +100,21 @@ export async function PUT(
       },
     });
 
+    // Notificar a postulados pendientes sobre la modificación
+    const pendingApplications = await prisma.application.findMany({
+      where: { jobId: id, status: "PENDING" },
+      include: { worker: true },
+    });
+
+    for (const app of pendingApplications) {
+      await prisma.notification.create({
+        data: {
+          userId: app.worker.userId,
+          message: `La oferta "${updated.title}" a la que estás postulado fue modificada. Revisá los nuevos detalles.`,
+        },
+      });
+    }
+
     return NextResponse.json(updated);
   } catch (error) {
     console.error("Error al actualizar oferta:", error);
@@ -153,6 +170,21 @@ export async function DELETE(
       where: { id },
       data: { status: "DELETED" },
     });
+
+    // Notificar a postulados pendientes sobre la eliminación (solo notificación, sin email)
+    const pendingApplications = await prisma.application.findMany({
+      where: { jobId: id, status: "PENDING" },
+      include: { worker: true },
+    });
+
+    for (const app of pendingApplications) {
+      await prisma.notification.create({
+        data: {
+          userId: app.worker.userId,
+          message: `La oferta "${job.title}" a la que estabas postulado fue eliminada por la empresa.`,
+        },
+      });
+    }
 
     return NextResponse.json({ message: "Oferta eliminada correctamente" });
   } catch (error) {

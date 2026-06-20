@@ -78,20 +78,13 @@ export async function POST(req: NextRequest) {
     });
 
     // Notificación interna a la empresa
-    await prisma.notification.create({
-      data: {
-        userId: job.company.user.id,
-        message: `Tenés una nueva postulación para la oferta "${job.title}".`,
-      },
-    });
-
-    // Email a la empresa
-    const emailData = emailNewApplication(
-      job.company.name,
-      job.title,
-      `${worker.firstName} ${worker.lastName}`
-    );
-    await sendMail({ to: job.company.user.email, ...emailData });
+    // Solo notificación interna a la empresa, sin email
+await prisma.notification.create({
+  data: {
+    userId: job.company.user.id,
+    message: `Tenés una nueva postulación para la oferta "${job.title}".`,
+  },
+});
 
     return NextResponse.json(application, { status: 201 });
   } catch (error) {

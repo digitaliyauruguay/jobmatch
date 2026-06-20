@@ -135,17 +135,25 @@ export default function WorkerDashboard() {
   fetchJobs();
   fetchApplications();
   fetchProfile();
+
+  const jobsInterval = setInterval(fetchJobs, 30000);
+  const appsInterval = setInterval(fetchApplications, 30000);
+
+  return () => {
+    clearInterval(jobsInterval);
+    clearInterval(appsInterval);
+  };
 }, []);
 
-  useEffect(() => {
-    fetchJobs();
-  }, [filters]);
+useEffect(() => {
+  fetchJobs();
+}, [filters]);
 
-  useEffect(() => {
-    if (activeSection === "applications") {
-      fetchApplications();
-    }
-  }, [activeSection]);
+useEffect(() => {
+  if (activeSection === "applications") {
+    fetchApplications();
+  }
+}, [activeSection]);
 
   const handleApply = async (jobId: string) => {
     setApplying(jobId);

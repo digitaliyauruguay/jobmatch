@@ -161,13 +161,21 @@ className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                           </>
                         )}
                         {filter === "ACTIVE" && (
-                          <button
-                            onClick={() => updateStatus(user.id, "BLOCKED")}
-                            className="px-3 py-1 bg-red-600 text-white rounded-lg text-xs hover:bg-red-700 transition-colors"
-                          >
-                            Bloquear
-                          </button>
-                        )}
+  <>
+    <button
+      onClick={() => updateStatus(user.id, "INACTIVE")}
+      className="px-3 py-1 bg-gray-500 text-white rounded-lg text-xs hover:bg-gray-600 transition-colors"
+    >
+      Desactivar
+    </button>
+    <button
+      onClick={() => updateStatus(user.id, "BLOCKED")}
+      className="px-3 py-1 bg-red-600 text-white rounded-lg text-xs hover:bg-red-700 transition-colors"
+    >
+      Bloquear
+    </button>
+  </>
+)}
                         {filter === "BLOCKED" && (
                           <button
                             onClick={() => updateStatus(user.id, "ACTIVE")}

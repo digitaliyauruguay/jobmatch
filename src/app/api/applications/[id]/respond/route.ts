@@ -91,19 +91,20 @@ export async function PATCH(
       },
     });
 
-    await sendMail({
-      to: application.job.company.user.email,
-      subject: `Respuesta a tu indicación — JobMatch Uruguay`,
-      html: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: ${status === "APPROVED" ? "#16a34a" : "#dc2626"};">
-            ${status === "APPROVED" ? "¡Indicación aceptada!" : "Indicación rechazada"}
-          </h2>
-          <p>Hola ${application.job.company.name},</p>
-          <p>${messages[status]}</p>
-        </div>
-      `,
-    });
+    if (status === "APPROVED") {
+  await sendMail({
+    to: application.job.company.user.email,
+    subject: `¡Indicación aceptada! — JobMatch Uruguay`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #16a34a;">¡Indicación aceptada!</h2>
+        <p>Hola ${application.job.company.name},</p>
+        <p>${messages[status]}</p>
+      </div>
+    `,
+  });
+}
+// REJECTED: solo notificación interna, sin email
 
     return NextResponse.json(updated);
   } catch (error) {

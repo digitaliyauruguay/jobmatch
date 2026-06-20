@@ -108,9 +108,29 @@ export default function CompanyDashboard() {
   fetchJobs();
   fetchProfile();
 
-  const interval = setInterval(fetchJobs, 30000);
-  return () => clearInterval(interval);
+  const jobsInterval = setInterval(fetchJobs, 30000);
+  return () => clearInterval(jobsInterval);
 }, []);
+
+useEffect(() => {
+  if (!selectedJob) return;
+
+  const appsInterval = setInterval(() => {
+    fetchApplications(selectedJob);
+  }, 30000);
+
+  return () => clearInterval(appsInterval);
+}, [selectedJob]);
+
+// Si la oferta seleccionada deja de estar activa, la deseleccionamos
+useEffect(() => {
+  if (selectedJob) {
+    const job = jobs.find((j) => j.id === selectedJob);
+    if (job && job.status !== "ACTIVE") {
+      setSelectedJob(null);
+    }
+  }
+}, [jobs, selectedJob]);
 
   const handleSelectJob = (jobId: string, jobStatus: string) => {
   if (jobStatus !== "ACTIVE") {

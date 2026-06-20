@@ -94,6 +94,8 @@ export default function EditCompanyProfilePage() {
       return;
     }
 
+    console.log("form antes de enviar:", form);
+    
     setLoading(true);
     setError("");
 

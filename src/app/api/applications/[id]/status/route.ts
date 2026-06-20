@@ -82,20 +82,14 @@ export async function PATCH(
 
     // Email al trabajador
     if (status === "APPROVED") {
-      const emailData = emailApplicationApproved(
-        application.worker.firstName,
-        application.job.title,
-        application.job.company.name
-      );
-      await sendMail({ to: application.worker.user.email, ...emailData });
-    } else {
-      const emailData = emailApplicationRejected(
-        application.worker.firstName,
-        application.job.title,
-        application.job.company.name
-      );
-      await sendMail({ to: application.worker.user.email, ...emailData });
-    }
+  const emailData = emailApplicationApproved(
+    application.worker.firstName,
+    application.job.title,
+    application.job.company.name
+  );
+  await sendMail({ to: application.worker.user.email, ...emailData });
+}
+// REJECTED: solo notificación interna, sin email
 
     return NextResponse.json(updated);
   } catch (error) {
