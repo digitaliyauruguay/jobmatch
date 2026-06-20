@@ -71,6 +71,7 @@ export default function WorkerDashboard() {
   const { data: session } = useSession();
   const [activeSection, setActiveSection] = useState<"jobs" | "applications">("jobs");
   const [profile, setProfile] = useState<{ firstName: string; photo: string | null; cvUrl: string | null } | null>(null);
+  
 
   // Ofertas
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -87,6 +88,8 @@ export default function WorkerDashboard() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [loadingApps, setLoadingApps] = useState(false);
   const [appTab, setAppTab] = useState<"SELF" | "INDICATED">("SELF");
+  const [respondingTo, setRespondingTo] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState<Record<string, string>>({});
 
   // Postulando
   const [applying, setApplying] = useState<string | null>(null);
@@ -160,6 +163,27 @@ export default function WorkerDashboard() {
     }
     setApplying(null);
   };
+
+  const handleRespondIndication = async (applicationId: string, status: string) => {
+  setRespondingTo(applicationId);
+
+  const res = await fetch(`/api/applications/${applicationId}/respond`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      status,
+      reason: status === "REJECTED" ? rejectReason[applicationId] : undefined,
+    }),
+  });
+
+  if (res.ok) {
+    fetchApplications();
+  } else {
+    const data = await res.json();
+    alert(data.error);
+  }
+  setRespondingTo(null);
+};
 
   const filteredApplications = applications.filter(
     (a) => a.origin === appTab
@@ -388,34 +412,65 @@ export default function WorkerDashboard() {
               </p>
             ) : (
               <div className="flex flex-col gap-3">
-                {filteredApplications.map((app) => (
-                  <div
-                    key={app.id}
-                    className="bg-white rounded-lg border border-gray-200 p-4 flex justify-between items-center"
-                  >
-                    <div>
-                      <p className="font-medium">{app.job.title}</p>
-                      <p className="text-sm text-gray-500 mt-0.5">
-                        {app.job.company.name} · {app.job.category.name}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {MODALITY_LABELS[app.job.modality]}
-                      </p>
-                    </div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      app.status === "PENDING"
-                        ? "bg-yellow-50 text-yellow-700"
-                        : app.status === "APPROVED"
-                        ? "bg-green-50 text-green-700"
-                        : "bg-red-50 text-red-700"
-                    }`}>
-                      {app.status === "PENDING" && "Pendiente"}
-                      {app.status === "APPROVED" && "Aprobado"}
-                      {app.status === "REJECTED" && "Rechazado"}
-                    </span>
-                  </div>
-                ))}
-              </div>
+  {filteredApplications.map((app) => (
+    <div
+      key={app.id}
+      className="bg-white rounded-lg border border-gray-200 p-4"
+    >
+      <div className="flex justify-between items-start">
+        <div>
+          <p className="font-medium">{app.job.title}</p>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {app.job.company.name} · {app.job.category.name}
+          </p>
+          <p className="text-xs text-gray-400 mt-1">
+            {MODALITY_LABELS[app.job.modality]}
+          </p>
+        </div>
+        <span
+          style={{
+            backgroundColor: app.status === "PENDING" ? "#fefce8" : app.status === "APPROVED" ? "#f0fdf4" : "#fef2f2",
+            color: app.status === "PENDING" ? "#a16207" : app.status === "APPROVED" ? "#15803d" : "#b91c1c",
+          }}
+          className="px-3 py-1 rounded-full text-xs font-medium"
+        >
+          {app.status === "PENDING" && "Pendiente"}
+          {app.status === "APPROVED" && (appTab === "INDICATED" ? "Aceptada" : "Aprobado")}
+          {app.status === "REJECTED" && (appTab === "INDICATED" ? "Rechazada" : "Rechazado")}
+        </span>
+      </div>
+
+      {appTab === "INDICATED" && app.status === "PENDING" && (
+        <div className="mt-3 pt-3 border-t border-gray-100 flex flex-col gap-2">
+          <p className="text-xs text-gray-500">¿Querés aceptar esta indicación?</p>
+          <input
+            type="text"
+            placeholder="Motivo si rechazás (opcional)"
+            value={rejectReason[app.id] || ""}
+            onChange={(e) => setRejectReason({ ...rejectReason, [app.id]: e.target.value })}
+            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleRespondIndication(app.id, "APPROVED")}
+              disabled={respondingTo === app.id}
+              className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
+            >
+              Aceptar
+            </button>
+            <button
+              onClick={() => handleRespondIndication(app.id, "REJECTED")}
+              disabled={respondingTo === app.id}
+              className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
+            >
+              Rechazar
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  ))}
+</div>
             )}
           </>
         )}

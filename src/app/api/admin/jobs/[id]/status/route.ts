@@ -2,20 +2,22 @@
  * Archivo: src/app/api/admin/jobs/[id]/status/route.ts
  * Qué hace: Permite al administrador cambiar el estado de una oferta
  * de trabajo. PATCH - actualiza el estado a ACTIVE, BLOCKED o DELETED.
- * Notifica a la empresa cuando su oferta es bloqueada o eliminada.
+ * Notifica a la empresa con notificación interna y email cuando
+ * su oferta es bloqueada, eliminada o reactivada.
  * Solo accesible por el administrador.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
+import { sendMail } from "@/lib/mail";
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params
+    const { id } = await params;
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
     if (!token || token.role !== "ADMIN") {
@@ -29,7 +31,7 @@ export async function PATCH(
     }
 
     const job = await prisma.job.update({
-      where: { id: id },
+      where: { id },
       data: { status },
       include: {
         company: {
@@ -40,7 +42,7 @@ export async function PATCH(
       },
     });
 
-    // Notificar a la empresa
+    // Notificación interna
     const defaultMessages: Record<string, string> = {
       BLOCKED: `Tu oferta "${job.title}" fue bloqueada por el administrador.${message ? ` Motivo: ${message}` : ""}`,
       DELETED: `Tu oferta "${job.title}" fue eliminada por el administrador.${message ? ` Motivo: ${message}` : ""}`,
@@ -52,6 +54,49 @@ export async function PATCH(
         userId: job.company.user.id,
         message: defaultMessages[status],
       },
+    });
+
+    // Email
+    const emailTemplates: Record<string, { subject: string; html: string }> = {
+      BLOCKED: {
+        subject: `Tu oferta fue bloqueada — JobMatch Uruguay`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #dc2626;">Tu oferta fue bloqueada</h2>
+            <p>Hola ${job.company.name},</p>
+            <p>Tu oferta <strong>"${job.title}"</strong> fue bloqueada por el administrador.</p>
+            ${message ? `<p><strong>Motivo:</strong> ${message}</p>` : ""}
+            <p>Revisá el contenido y contactá al equipo si tenés dudas.</p>
+          </div>
+        `,
+      },
+      DELETED: {
+        subject: `Tu oferta fue eliminada — JobMatch Uruguay`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #dc2626;">Tu oferta fue eliminada</h2>
+            <p>Hola ${job.company.name},</p>
+            <p>Tu oferta <strong>"${job.title}"</strong> fue eliminada por el administrador.</p>
+            ${message ? `<p><strong>Motivo:</strong> ${message}</p>` : ""}
+            <p>Si tenés dudas, contactá al equipo.</p>
+          </div>
+        `,
+      },
+      ACTIVE: {
+        subject: `Tu oferta fue reactivada — JobMatch Uruguay`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #16a34a;">Tu oferta fue reactivada</h2>
+            <p>Hola ${job.company.name},</p>
+            <p>Tu oferta <strong>"${job.title}"</strong> fue reactivada y ya está visible para los trabajadores.</p>
+          </div>
+        `,
+      },
+    };
+
+    await sendMail({
+      to: job.company.user.email,
+      ...emailTemplates[status],
     });
 
     return NextResponse.json({ message: "Estado actualizado", job });

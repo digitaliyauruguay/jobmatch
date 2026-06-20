@@ -59,6 +59,7 @@ enum JobStatus {
   ACTIVE
   BLOCKED
   DELETED
+  COMPLETED
 }
 
 enum ApplicationOrigin {

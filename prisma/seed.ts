@@ -20,17 +20,32 @@ async function main() {
   const password = await bcrypt.hash("admin1234", 10);
 
   const admin = await prisma.user.upsert({
-    where: { email: "admin@jobmatch.com" },
-    update: {},
-    create: {
-      email: "admin@jobmatch.com",
-      password,
-      role: "ADMIN",
-      status: "ACTIVE",
-    },
-  });
+  where: { email: "admin@jobmatch.com" },
+  update: {},
+  create: {
+    email: "admin@jobmatch.com",
+    password,
+    role: "ADMIN",
+    status: "ACTIVE",
+  },
+});
 
-  console.log("Admin creado:", admin.email);
+console.log("Admin creado:", admin.email);
+
+const adminPassword2 = await bcrypt.hash("admin1234", 10);
+
+const admin2 = await prisma.user.upsert({
+  where: { email: "stacksurcode@gmail.com" },
+  update: {},
+  create: {
+    email: "stacksurcode@gmail.com",
+    password: adminPassword2,
+    role: "ADMIN",
+    status: "ACTIVE",
+  },
+});
+
+console.log("Admin 2 creado:", admin2.email);
 
   // Crear categorías
   const categories = [

@@ -9,6 +9,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { sendMail } from "@/lib/mail";
+import { emailRegistrationReceived } from "@/lib/emails";
+
+async function notifyAdmin(roleLabel: string, name: string, email: string) {
+  const admins = await prisma.user.findMany({ where: { role: "ADMIN" } });
+
+  for (const admin of admins) {
+    await prisma.notification.create({
+      data: {
+        userId: admin.id,
+        message: `Nueva cuenta de ${roleLabel} esperando aprobación: ${name} (${email})`,
+      },
+    });
+
+    await sendMail({
+      to: admin.email,
+      subject: `Nueva cuenta pendiente de aprobación — JobMatch Uruguay`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #1d4ed8;">Nueva cuenta pendiente</h2>
+          <p>Se registró una nueva cuenta de <strong>${roleLabel}</strong>:</p>
+          <p><strong>Nombre:</strong> ${name}<br><strong>Email:</strong> ${email}</p>
+          <p>Ingresá al panel de administración para revisarla y aprobarla.</p>
+        </div>
+      `,
+    });
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -78,6 +106,12 @@ if (!emailRegex.test(email)) {
           },
         },
       });
+      await notifyAdmin("trabajador", `${firstName} ${lastName}`, email);
+
+      await sendMail({
+        to: email,
+        ...emailRegistrationReceived(firstName),
+});
     }
 
     if (role === "COMPANY") {
@@ -110,6 +144,12 @@ if (!emailRegex.test(email)) {
           },
         },
       });
+      await notifyAdmin("empresa", name, email);
+
+      await sendMail({
+        to: email,
+        ...emailRegistrationReceived(name),
+});
     }
 
     return NextResponse.json(

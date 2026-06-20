@@ -30,10 +30,9 @@ export async function GET(req: NextRequest) {
     }
 
     const jobs = await prisma.job.findMany({
-      where: {
-        companyId: company.id,
-        status: { not: "DELETED" },
-      },
+  where: {
+    companyId: company.id,
+  },
       include: {
         category: { select: { name: true } },
       },

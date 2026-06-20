@@ -23,6 +23,21 @@ export const emailUserApproved = (firstName: string) => ({
   `,
 });
 
+export const emailRegistrationReceived = (firstName: string) => ({
+  subject: "Recibimos tu registro — JobMatch Uruguay",
+  html: `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #1d4ed8;">¡Gracias por registrarte!</h2>
+      <p>Hola ${firstName},</p>
+      <p>Recibimos tu registro en JobMatch Uruguay. Nuestro equipo va a revisar tu cuenta y aprobarla en un plazo de hasta 48 horas hábiles.</p>
+      <p>Te vamos a avisar por este mismo correo en cuanto tu cuenta esté activa.</p>
+      <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">
+        Si tenés alguna consulta, podés responder este email.
+      </p>
+    </div>
+  `,
+});
+
 export const emailUserBlocked = (firstName: string, reason?: string) => ({
   subject: "Tu cuenta fue bloqueada — JobMatch Uruguay",
   html: `
