@@ -56,25 +56,26 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  if (pathname.startsWith("/login") || pathname.startsWith("/register")) {
-    if (token) {
-      if (token.role === "WORKER") {
-        return NextResponse.redirect(new URL("/worker/dashboard", req.url));
-      }
-      if (token.role === "COMPANY") {
-        return NextResponse.redirect(new URL("/company/dashboard", req.url));
-      }
-      if (token.role === "ADMIN") {
-        return NextResponse.redirect(new URL("/admin/dashboard", req.url));
-      }
+  if (pathname === "/" || pathname.startsWith("/login") || pathname.startsWith("/register")) {
+  if (token) {
+    if (token.role === "WORKER") {
+      return NextResponse.redirect(new URL("/worker/dashboard", req.url));
+    }
+    if (token.role === "COMPANY") {
+      return NextResponse.redirect(new URL("/company/dashboard", req.url));
+    }
+    if (token.role === "ADMIN") {
+      return NextResponse.redirect(new URL("/admin/dashboard", req.url));
     }
   }
+}
 
   return NextResponse.next();
 }
 
 export const config = {
   matcher: [
+    "/",
     "/admin/:path*",
     "/worker/:path*",
     "/company/:path*",

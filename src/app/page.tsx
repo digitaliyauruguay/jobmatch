@@ -68,9 +68,9 @@ export default function HomePage() {
         <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-2xl mx-auto">
           {/* Card trabajador */}
           <Link
-            href="/register"
-            className="flex-1 bg-jm-card border border-jm-border rounded-2xl p-6 text-left hover:border-jm-cyan transition-colors cursor-pointer group"
-          >
+  href="/register?role=worker"
+  className="flex-1 bg-jm-card border border-jm-border rounded-2xl p-6 text-left hover:border-jm-cyan transition-colors cursor-pointer group"
+>
             <div className="flex items-center gap-2 mb-3">
               <IconUserCheck size={18} className="text-jm-cyan-light" />
               <p className="text-xs font-semibold text-jm-cyan-light tracking-wide">SOY TRABAJADOR</p>
@@ -86,9 +86,9 @@ export default function HomePage() {
 
           {/* Card empresa */}
           <Link
-            href="/register"
-            className="flex-1 bg-jm-card border border-jm-border rounded-2xl p-6 text-left hover:border-jm-magenta transition-colors cursor-pointer group"
-          >
+  href="/register?role=company"
+  className="flex-1 bg-jm-card border border-jm-border rounded-2xl p-6 text-left hover:border-jm-magenta transition-colors cursor-pointer group"
+>
             <div className="flex items-center gap-2 mb-3">
               <IconBuildingStore size={18} className="text-jm-magenta-light" />
               <p className="text-xs font-semibold text-jm-magenta-light tracking-wide">SOY EMPRESA</p>

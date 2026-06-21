@@ -1,18 +1,22 @@
 /*
  * Archivo: src/app/(auth)/register/page.tsx
- * Qué hace: Página de registro de nuevos usuarios. Permite registrarse
- * como trabajador o como empresa en tres pasos. El usuario y el perfil
- * se crean en un único paso al final, evitando usuarios sin perfil
- * en caso de error. Al completar queda en estado PENDING esperando
- * aprobación del administrador.
+ * Qué hace: Página de registro de nuevos usuarios con tema oscuro
+ * JobMatch. Permite registrarse como trabajador o empresa en tres
+ * pasos. Si llega con ?role=worker o ?role=company en la URL (desde
+ * la home), salta directo al paso 2 con el rol ya preseleccionado,
+ * sin mostrar de nuevo la pregunta de "¿cómo querés registrarte?".
+ * El usuario y el perfil se crean en un único paso al final, evitando
+ * usuarios sin perfil en caso de error. Queda en estado PENDING
+ * esperando aprobación del administrador.
  */
 
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import FileUpload from "@/components/ui/FileUpload";
+import { IconBriefcase, IconUserCheck, IconBuildingStore } from "@tabler/icons-react";
 
 type Category = {
   id: string;
@@ -44,18 +48,19 @@ const AVAILABILITY_LABELS: Record<string, string> = {
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [step, setStep] = useState(1);
   const [role, setRole] = useState<"WORKER" | "COMPANY" | "">("");
+  const [skippedStep1, setSkippedStep1] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Datos comunes
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // Datos trabajador
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [department, setDepartment] = useState("");
@@ -65,7 +70,6 @@ export default function RegisterPage() {
   const [photo, setPhoto] = useState("");
   const [cvUrl, setCvUrl] = useState("");
 
-  // Datos empresa
   const [companyName, setCompanyName] = useState("");
   const [companyDepartment, setCompanyDepartment] = useState("");
   const [contact, setContact] = useState("");
@@ -76,7 +80,19 @@ export default function RegisterPage() {
     fetch("/api/categories")
       .then((r) => r.json())
       .then(setCategories);
-  }, []);
+
+    // Si llega con ?role=worker o ?role=company desde la home, saltamos el paso 1
+    const roleParam = searchParams.get("role");
+    if (roleParam === "worker") {
+      setRole("WORKER");
+      setStep(2);
+      setSkippedStep1(true);
+    } else if (roleParam === "company") {
+      setRole("COMPANY");
+      setStep(2);
+      setSkippedStep1(true);
+    }
+  }, [searchParams]);
 
   const toggleCategory = (id: string) => {
     setSelectedCategories((prev) =>
@@ -85,37 +101,37 @@ export default function RegisterPage() {
   };
 
   const validateStep2 = async () => {
-  if (!email || !password) {
-    setError("Completá todos los campos");
-    return false;
-  }
+    if (!email || !password) {
+      setError("Completá todos los campos");
+      return false;
+    }
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/;
-  if (!emailRegex.test(email)) {
-    setError("Ingresá un email válido");
-    return false;
-  }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email)) {
+      setError("Ingresá un email válido");
+      return false;
+    }
 
-  if (password.length < 8) {
-    setError("La contraseña debe tener al menos 8 caracteres");
-    return false;
-  }
+    if (password.length < 8) {
+      setError("La contraseña debe tener al menos 8 caracteres");
+      return false;
+    }
 
-  const res = await fetch("/api/auth/check-email", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
-  });
-  const data = await res.json();
+    const res = await fetch("/api/auth/check-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
 
-  if (data.exists) {
-    setError("Ya existe una cuenta con ese email");
-    return false;
-  }
+    if (data.exists) {
+      setError("Ya existe una cuenta con ese email");
+      return false;
+    }
 
-  setError("");
-  return true;
-};
+    setError("");
+    return true;
+  };
 
   const validateStep3 = () => {
     if (selectedCategories.length === 0) {
@@ -139,67 +155,74 @@ export default function RegisterPage() {
   };
 
   const handleRegister = async () => {
-  if (!validateStep3()) return;
+    if (!validateStep3()) return;
 
-  console.log("photo:", photo);
-  console.log("cvUrl:", cvUrl);
-  console.log("logo:", logo);
-  setLoading(true);
-  setError("");
+    setLoading(true);
+    setError("");
 
-  try {
-    const profileData =
-  role === "WORKER"
-    ? {
-        firstName,
-        lastName,
-        department,
-        phone,
-        description,
-        availability,
-        photo: photo || null,
-        cvUrl: cvUrl || null,
-        categoryIds: selectedCategories,
+    try {
+      const profileData =
+        role === "WORKER"
+          ? {
+              firstName,
+              lastName,
+              department,
+              phone,
+              description,
+              availability,
+              photo: photo || null,
+              cvUrl: cvUrl || null,
+              categoryIds: selectedCategories,
+            }
+          : {
+              name: companyName,
+              department: companyDepartment,
+              contact,
+              description: companyDescription,
+              logo: logo || null,
+              categoryIds: selectedCategories,
+            };
+
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, role, profile: profileData }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error);
+        setLoading(false);
+        return;
       }
-    : {
-        name: companyName,
-        department: companyDepartment,
-        contact,
-        description: companyDescription,
-        logo: logo || null,
-        categoryIds: selectedCategories,
-      };
 
-    const res = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, role, profile: profileData }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      setError(data.error);
+      router.push("/pending");
+    } catch {
+      setError("Ocurrió un error inesperado. Intentá de nuevo.");
       setLoading(false);
-      return;
     }
-
-    // Redirigir a página de espera de aprobación
-    router.push("/pending");
-  } catch {
-    setError("Ocurrió un error inesperado. Intentá de nuevo.");
-    setLoading(false);
-  }
-};
+  };
 
   return (
-    <main className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-lg mx-auto px-4">
-        <div className="bg-white rounded-xl shadow-sm p-8">
-          <h1 className="text-2xl font-medium text-gray-900 mb-2">Crear cuenta</h1>
-          <p className="text-gray-500 text-sm mb-8">
+    <main className="min-h-screen bg-jm-black py-12 px-4">
+      <div className="max-w-lg mx-auto">
+        <Link href="/" className="flex items-center justify-center gap-2 mb-8 cursor-pointer group">
+          <IconBriefcase
+            size={26}
+            className="text-jm-magenta-light transition-transform duration-200 group-hover:scale-110 group-hover:rotate-[-6deg]"
+          />
+          <span className="text-xl font-medium text-jm-text transition-colors duration-200 group-hover:text-jm-magenta-light">
+            JobMatch
+          </span>
+        </Link>
+
+        <div className="bg-jm-card border border-jm-border rounded-2xl p-8">
+          <h1 className="text-2xl font-medium text-jm-text mb-2">Crear cuenta</h1>
+          <p className="text-jm-text-secondary text-sm mb-8">
             {step === 1 && "¿Cómo querés registrarte?"}
-            {step === 2 && "Datos de acceso"}
+            {step === 2 && role === "WORKER" && "Datos de acceso — Trabajador"}
+            {step === 2 && role === "COMPANY" && "Datos de acceso — Empresa"}
             {step === 3 && role === "WORKER" && "Tu perfil de trabajador"}
             {step === 3 && role === "COMPANY" && "Perfil de tu empresa"}
           </p>
@@ -209,19 +232,25 @@ export default function RegisterPage() {
             <div className="flex flex-col gap-4">
               <button
                 onClick={() => { setRole("WORKER"); setStep(2); }}
-                className="border-2 border-gray-200 rounded-xl p-6 text-left hover:border-blue-500 transition-colors"
+                className="border-2 border-jm-border rounded-xl p-6 text-left hover:border-jm-cyan transition-colors cursor-pointer group"
               >
-                <p className="font-medium text-gray-900">Soy trabajador</p>
-                <p className="text-sm text-gray-500 mt-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <IconUserCheck size={18} className="text-jm-cyan-light" />
+                  <p className="font-medium text-jm-text">Soy trabajador</p>
+                </div>
+                <p className="text-sm text-jm-text-secondary">
                   Buscás empleo y querés postularte a ofertas
                 </p>
               </button>
               <button
                 onClick={() => { setRole("COMPANY"); setStep(2); }}
-                className="border-2 border-gray-200 rounded-xl p-6 text-left hover:border-blue-500 transition-colors"
+                className="border-2 border-jm-border rounded-xl p-6 text-left hover:border-jm-magenta transition-colors cursor-pointer group"
               >
-                <p className="font-medium text-gray-900">Soy empresa</p>
-                <p className="text-sm text-gray-500 mt-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <IconBuildingStore size={18} className="text-jm-magenta-light" />
+                  <p className="font-medium text-jm-text">Soy empresa</p>
+                </div>
+                <p className="text-sm text-jm-text-secondary">
                   Querés publicar ofertas y encontrar trabajadores
                 </p>
               </button>
@@ -232,39 +261,41 @@ export default function RegisterPage() {
           {step === 2 && (
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-1">
-                <label className="text-sm text-gray-700">Email</label>
+                <label className="text-sm text-jm-text-secondary">Email</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                  className="bg-jm-card-hover border border-jm-border rounded-lg px-4 py-2.5 text-sm text-jm-text focus:outline-none focus:border-jm-magenta"
                   placeholder="tu@email.com"
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-sm text-gray-700">Contraseña</label>
+                <label className="text-sm text-jm-text-secondary">Contraseña</label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                  className="bg-jm-card-hover border border-jm-border rounded-lg px-4 py-2.5 text-sm text-jm-text focus:outline-none focus:border-jm-magenta"
                   placeholder="Mínimo 8 caracteres"
                 />
               </div>
-              {error && <p className="text-red-500 text-sm">{error}</p>}
+              {error && <p className="text-jm-red-light text-sm">{error}</p>}
               <div className="flex gap-2 mt-2">
+                {!skippedStep1 && (
+                  <button
+                    onClick={() => { setStep(1); setError(""); }}
+                    className="flex-1 border border-jm-border text-jm-text-secondary rounded-lg py-2.5 text-sm hover:border-jm-gray transition-colors cursor-pointer"
+                  >
+                    Atrás
+                  </button>
+                )}
                 <button
-                  onClick={() => { setStep(1); setError(""); }}
-                  className="flex-1 border border-gray-200 text-gray-600 rounded-lg py-2.5 text-sm hover:border-gray-400 transition-colors"
+                  onClick={async () => { if (await validateStep2()) setStep(3); }}
+                  className="flex-1 bg-jm-magenta text-white rounded-lg py-2.5 text-sm font-medium shadow-[0_0_0_0_rgba(212,83,126,0)] hover:shadow-[0_0_20px_2px_rgba(212,83,126,0.45)] hover:bg-jm-magenta-light hover:text-jm-magenta-bg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 cursor-pointer"
                 >
-                  Atrás
+                  Continuar
                 </button>
-                <button
-  onClick={async () => { if (await validateStep2()) setStep(3); }}
-  className="flex-1 bg-blue-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-blue-700 transition-colors"
->
-  Continuar
-</button>
               </div>
             </div>
           )}
@@ -276,40 +307,40 @@ export default function RegisterPage() {
                 <>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1">
-                      <label className="text-sm text-gray-700">Nombre</label>
+                      <label className="text-sm text-jm-text-secondary">Nombre</label>
                       <input
                         type="text"
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
-                        className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                        className="bg-jm-card-hover border border-jm-border rounded-lg px-4 py-2.5 text-sm text-jm-text focus:outline-none focus:border-jm-magenta"
                       />
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-sm text-gray-700">Apellido</label>
+                      <label className="text-sm text-jm-text-secondary">Apellido</label>
                       <input
                         type="text"
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
-                        className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                        className="bg-jm-card-hover border border-jm-border rounded-lg px-4 py-2.5 text-sm text-jm-text focus:outline-none focus:border-jm-magenta"
                       />
                     </div>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-sm text-gray-700">Teléfono</label>
+                    <label className="text-sm text-jm-text-secondary">Teléfono</label>
                     <input
                       type="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                      className="bg-jm-card-hover border border-jm-border rounded-lg px-4 py-2.5 text-sm text-jm-text focus:outline-none focus:border-jm-magenta"
                       placeholder="09X XXX XXX"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-sm text-gray-700">Departamento</label>
+                    <label className="text-sm text-jm-text-secondary">Departamento</label>
                     <select
                       value={department}
                       onChange={(e) => setDepartment(e.target.value)}
-                      className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                      className="bg-jm-card-hover border border-jm-border rounded-lg px-4 py-2.5 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer"
                     >
                       <option value="">Seleccioná tu departamento</option>
                       {DEPARTMENTS.map((d) => (
@@ -318,11 +349,11 @@ export default function RegisterPage() {
                     </select>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-sm text-gray-700">Disponibilidad</label>
+                    <label className="text-sm text-jm-text-secondary">Disponibilidad</label>
                     <select
                       value={availability}
                       onChange={(e) => setAvailability(e.target.value)}
-                      className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                      className="bg-jm-card-hover border border-jm-border rounded-lg px-4 py-2.5 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer"
                     >
                       <option value="">¿Cuándo podés empezar?</option>
                       {Object.entries(AVAILABILITY_LABELS).map(([k, v]) => (
@@ -331,11 +362,11 @@ export default function RegisterPage() {
                     </select>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-sm text-gray-700">Sobre vos (opcional)</label>
+                    <label className="text-sm text-jm-text-secondary">Sobre vos (opcional)</label>
                     <textarea
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 resize-none"
+                      className="bg-jm-card-hover border border-jm-border rounded-lg px-4 py-2.5 text-sm text-jm-text focus:outline-none focus:border-jm-magenta resize-none"
                       rows={3}
                       placeholder="Contanos algo sobre vos..."
                     />
@@ -351,26 +382,25 @@ export default function RegisterPage() {
                     onUpload={(url) => setCvUrl(url)}
                   />
                 </>
-                
               )}
 
               {role === "COMPANY" && (
                 <>
                   <div className="flex flex-col gap-1">
-                    <label className="text-sm text-gray-700">Nombre de la empresa</label>
+                    <label className="text-sm text-jm-text-secondary">Nombre de la empresa</label>
                     <input
                       type="text"
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
-                      className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                      className="bg-jm-card-hover border border-jm-border rounded-lg px-4 py-2.5 text-sm text-jm-text focus:outline-none focus:border-jm-magenta"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-sm text-gray-700">Departamento</label>
+                    <label className="text-sm text-jm-text-secondary">Departamento</label>
                     <select
                       value={companyDepartment}
                       onChange={(e) => setCompanyDepartment(e.target.value)}
-                      className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                      className="bg-jm-card-hover border border-jm-border rounded-lg px-4 py-2.5 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer"
                     >
                       <option value="">Seleccioná el departamento</option>
                       {DEPARTMENTS.map((d) => (
@@ -379,21 +409,21 @@ export default function RegisterPage() {
                     </select>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-sm text-gray-700">Contacto</label>
+                    <label className="text-sm text-jm-text-secondary">Contacto</label>
                     <input
                       type="text"
                       value={contact}
                       onChange={(e) => setContact(e.target.value)}
-                      className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                      className="bg-jm-card-hover border border-jm-border rounded-lg px-4 py-2.5 text-sm text-jm-text focus:outline-none focus:border-jm-magenta"
                       placeholder="Teléfono o email de contacto"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-sm text-gray-700">Descripción (opcional)</label>
+                    <label className="text-sm text-jm-text-secondary">Descripción (opcional)</label>
                     <textarea
                       value={companyDescription}
                       onChange={(e) => setCompanyDescription(e.target.value)}
-                      className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 resize-none"
+                      className="bg-jm-card-hover border border-jm-border rounded-lg px-4 py-2.5 text-sm text-jm-text focus:outline-none focus:border-jm-magenta resize-none"
                       rows={3}
                       placeholder="Contanos sobre tu empresa..."
                     />
@@ -408,42 +438,45 @@ export default function RegisterPage() {
 
               {/* Categorías */}
               <div className="flex flex-col gap-2">
-                <label className="text-sm text-gray-700">
+                <label className="text-sm text-jm-text-secondary">
                   {role === "WORKER"
                     ? "¿En qué rubros podés trabajar?"
                     : "¿En qué rubros opera tu empresa?"}
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {categories.map((cat) => (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => toggleCategory(cat.id)}
-                      style={{
-  backgroundColor: selectedCategories.includes(cat.id) ? "#2563eb" : "#f3f4f6",
-  color: selectedCategories.includes(cat.id) ? "white" : "#374151",
-}}
-className="px-3 py-1.5 rounded-lg text-sm transition-colors"
-                    >
-                      {cat.name}
-                    </button>
-                  ))}
+                  {categories.map((cat) => {
+                    const isSelected = selectedCategories.includes(cat.id);
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => toggleCategory(cat.id)}
+                        style={{
+                          backgroundColor: isSelected ? "#993556" : "#1c1b22",
+                          color: isSelected ? "#ffffff" : "#84818f",
+                        }}
+                        className="px-3 py-1.5 rounded-lg text-sm transition-colors cursor-pointer"
+                      >
+                        {cat.name}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              {error && <p className="text-red-500 text-sm">{error}</p>}
+              {error && <p className="text-jm-red-light text-sm">{error}</p>}
 
               <div className="flex gap-2 mt-2">
                 <button
                   onClick={() => { setStep(2); setError(""); }}
-                  className="flex-1 border border-gray-200 text-gray-600 rounded-lg py-2.5 text-sm hover:border-gray-400 transition-colors"
+                  className="flex-1 border border-jm-border text-jm-text-secondary rounded-lg py-2.5 text-sm hover:border-jm-gray transition-colors cursor-pointer"
                 >
                   Atrás
                 </button>
                 <button
                   onClick={handleRegister}
                   disabled={loading}
-                  className="flex-1 bg-blue-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  className="flex-1 bg-jm-magenta text-white rounded-lg py-2.5 text-sm font-medium shadow-[0_0_0_0_rgba(212,83,126,0)] hover:shadow-[0_0_20px_2px_rgba(212,83,126,0.45)] hover:bg-jm-magenta-light hover:text-jm-magenta-bg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 >
                   {loading ? "Creando cuenta..." : "Crear cuenta"}
                 </button>
@@ -451,11 +484,11 @@ className="px-3 py-1.5 rounded-lg text-sm transition-colors"
             </div>
           )}
 
-          <p className="text-sm text-gray-500 mt-6 text-center">
+          <p className="text-sm text-jm-text-tertiary mt-6 text-center">
             ¿Ya tenés cuenta?{" "}
-            <a href="/login" className="text-blue-600 hover:underline">
+            <Link href="/login" className="text-jm-cyan-light hover:underline cursor-pointer">
               Iniciá sesión
-            </a>
+            </Link>
           </p>
         </div>
       </div>
