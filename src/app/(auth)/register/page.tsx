@@ -7,12 +7,13 @@
  * sin mostrar de nuevo la pregunta de "¿cómo querés registrarte?".
  * El usuario y el perfil se crean en un único paso al final, evitando
  * usuarios sin perfil en caso de error. Queda en estado PENDING
- * esperando aprobación del administrador.
+ * esperando aprobación del administrador. Envuelto en Suspense porque
+ * usa useSearchParams, requerido por Next.js para el build estático.
  */
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import FileUpload from "@/components/ui/FileUpload";
@@ -46,7 +47,7 @@ const AVAILABILITY_LABELS: Record<string, string> = {
   ONE_MONTH: "En un mes",
 };
 
-export default function RegisterPage() {
+function RegisterPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -81,7 +82,6 @@ export default function RegisterPage() {
       .then((r) => r.json())
       .then(setCategories);
 
-    // Si llega con ?role=worker o ?role=company desde la home, saltamos el paso 1
     const roleParam = searchParams.get("role");
     if (roleParam === "worker") {
       setRole("WORKER");
@@ -493,5 +493,17 @@ export default function RegisterPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-jm-black flex items-center justify-center">
+        <p className="text-jm-text-tertiary text-sm">Cargando...</p>
+      </main>
+    }>
+      <RegisterPageContent />
+    </Suspense>
   );
 }
