@@ -1,8 +1,9 @@
 /*
  * Archivo: src/app/(company)/company/workers/page.tsx
  * Qué hace: Página para que la empresa busque trabajadores disponibles
- * y los indique para una de sus ofertas publicadas. Muestra el perfil
- * básico de cada trabajador y permite seleccionar a cuál oferta indicarlo.
+ * y los indique para una de sus ofertas publicadas. Permite filtrar
+ * por categoría y departamento. Muestra el perfil básico de cada
+ * trabajador y permite seleccionar a cuál oferta indicarlo.
  * Al indicar se crea una postulación con origin INDICATED y se notifica
  * al trabajador por email y notificación interna.
  */
@@ -11,6 +12,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Badge from "@/components/ui/Badge";
+import Button from "@/components/ui/Button";
+import { IconFileText, IconArrowLeft } from "@tabler/icons-react";
 
 type Worker = {
   id: string;
@@ -27,6 +31,11 @@ type Worker = {
 type Job = {
   id: string;
   title: string;
+};
+
+type Category = {
+  id: string;
+  name: string;
 };
 
 const AVAILABILITY_LABELS: Record<string, string> = {
@@ -48,26 +57,47 @@ const DEPARTMENT_LABELS: Record<string, string> = {
 export default function CompanyWorkersPage() {
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [indicating, setIndicating] = useState<string | null>(null);
   const [selectedJob, setSelectedJob] = useState<Record<string, string>>({});
   const [indicated, setIndicated] = useState<string[]>([]);
   const [error, setError] = useState<Record<string, string>>({});
+  const [filters, setFilters] = useState({
+    categoryId: "",
+    department: "",
+  });
+
+  const fetchWorkers = async () => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (filters.categoryId) params.append("categoryId", filters.categoryId);
+    if (filters.department) params.append("department", filters.department);
+
+    const res = await fetch(`/api/workers?${params.toString()}`);
+    const data = await res.json();
+    setWorkers(data);
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      const [workersRes, jobsRes] = await Promise.all([
-        fetch("/api/workers"),
+    const fetchInitial = async () => {
+      const [jobsRes, categoriesRes] = await Promise.all([
         fetch("/api/companies/me/jobs"),
+        fetch("/api/categories"),
       ]);
-      const workersData = await workersRes.json();
       const jobsData = await jobsRes.json();
-      setWorkers(workersData);
+      const categoriesData = await categoriesRes.json();
       setJobs(jobsData.filter((j: any) => j.status === "ACTIVE"));
-      setLoading(false);
+      setCategories(categoriesData);
     };
-    fetchData();
+    fetchInitial();
+    fetchWorkers();
   }, []);
+
+  useEffect(() => {
+    fetchWorkers();
+  }, [filters]);
 
   const handleIndicate = async (workerId: string) => {
     const jobId = selectedJob[workerId];
@@ -97,64 +127,80 @@ export default function CompanyWorkersPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/company/dashboard"
-              className="text-gray-500 hover:text-gray-900 text-sm"
-            >
-              ← Volver
-            </Link>
-            <h1 className="text-xl font-medium">Buscar trabajadores</h1>
-          </div>
-        </div>
-      </nav>
+  <div className="max-w-7xl mx-auto px-4 py-8">
+    <Link
+      href="/company/dashboard"
+      className="flex items-center gap-1.5 text-sm text-jm-text-secondary hover:text-jm-text transition-colors cursor-pointer mb-6"
+    >
+      <IconArrowLeft size={16} />
+      Volver
+    </Link>
+        <h1 className="text-xl font-medium text-jm-text mb-6">Buscar trabajadores</h1>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
         {jobs.length === 0 && !loading && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-            <p className="text-sm text-yellow-800">
+          <div className="bg-jm-cyan-bg border border-jm-cyan rounded-lg p-4 mb-6">
+            <p className="text-sm text-jm-cyan-light">
               No tenés ofertas activas. Creá una oferta primero para poder indicar trabajadores.
             </p>
           </div>
         )}
 
+        {/* Filtros */}
+        <div className="grid grid-cols-2 gap-3 mb-6 max-w-md">
+          <select
+            value={filters.categoryId}
+            onChange={(e) => setFilters({ ...filters, categoryId: e.target.value })}
+            className="bg-jm-card border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer"
+          >
+            <option value="">Todas las categorías</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+
+          <select
+            value={filters.department}
+            onChange={(e) => setFilters({ ...filters, department: e.target.value })}
+            className="bg-jm-card border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer"
+          >
+            <option value="">Todos los departamentos</option>
+            {Object.entries(DEPARTMENT_LABELS).map(([k, v]) => (
+              <option key={k} value={k}>{v}</option>
+            ))}
+          </select>
+        </div>
+
         {loading ? (
-          <p className="text-gray-500 text-sm">Cargando trabajadores...</p>
+          <p className="text-jm-text-tertiary text-sm">Cargando trabajadores...</p>
         ) : workers.length === 0 ? (
-          <p className="text-gray-500 text-sm">No hay trabajadores disponibles.</p>
+          <p className="text-jm-text-tertiary text-sm">No hay trabajadores disponibles.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {workers.map((worker) => (
               <div
                 key={worker.id}
-                className="bg-white rounded-lg border border-gray-200 p-5"
+                className="bg-jm-card border border-jm-border rounded-lg p-5"
               >
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <p className="font-medium">
+                    <p className="font-medium text-jm-text">
                       {worker.firstName} {worker.lastName}
                     </p>
-                    <p className="text-sm text-gray-500 mt-0.5">
+                    <p className="text-sm text-jm-text-secondary mt-0.5">
                       {DEPARTMENT_LABELS[worker.department]}
                     </p>
-                    <p className="text-xs text-blue-600 mt-1">
+                    <p className="text-xs text-jm-cyan-light mt-1">
                       {AVAILABILITY_LABELS[worker.availability]}
                     </p>
                     <div className="flex flex-wrap gap-1 mt-2">
                       {worker.categories.map((c) => (
-                        <span
-                          key={c.category.name}
-                          className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs"
-                        >
+                        <Badge key={c.category.name} variant="cyan">
                           {c.category.name}
-                        </span>
+                        </Badge>
                       ))}
                     </div>
                     {worker.description && (
-                      <p className="text-sm text-gray-600 mt-2 line-clamp-2">
+                      <p className="text-sm text-jm-text-secondary mt-2 line-clamp-2">
                         {worker.description}
                       </p>
                     )}
@@ -163,8 +209,9 @@ export default function CompanyWorkersPage() {
                         href={worker.cvUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 text-xs hover:underline mt-2 inline-block"
+                        className="flex items-center gap-1 text-jm-cyan-light text-xs hover:underline mt-2 cursor-pointer"
                       >
+                        <IconFileText size={13} />
                         Ver CV
                       </a>
                     )}
@@ -178,7 +225,7 @@ export default function CompanyWorkersPage() {
                       onChange={(e) =>
                         setSelectedJob({ ...selectedJob, [worker.id]: e.target.value })
                       }
-                      className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                      className="bg-jm-card-hover border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer"
                     >
                       <option value="">Seleccioná una oferta</option>
                       {jobs.map((job) => (
@@ -189,28 +236,28 @@ export default function CompanyWorkersPage() {
                     </select>
 
                     {error[worker.id] && (
-                      <p className="text-red-500 text-xs">{error[worker.id]}</p>
+                      <p className="text-jm-red-light text-xs">{error[worker.id]}</p>
                     )}
 
-                    <button
-  onClick={() => handleIndicate(worker.id)}
-  disabled={
-    indicating === worker.id ||
-    indicated.includes(`${worker.id}-${selectedJob[worker.id]}`)
-  }
-  style={{
-    backgroundColor: indicated.includes(`${worker.id}-${selectedJob[worker.id]}`) ? "#f3f4f6" : "#2563eb",
-    color: indicated.includes(`${worker.id}-${selectedJob[worker.id]}`) ? "#6b7280" : "white",
-    cursor: indicated.includes(`${worker.id}-${selectedJob[worker.id]}`) ? "not-allowed" : "pointer",
-  }}
-  className="w-full py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
->
+                    <Button
+                      fullWidth
+                      variant={
+                        indicated.includes(`${worker.id}-${selectedJob[worker.id]}`)
+                          ? "disabled"
+                          : "primary"
+                      }
+                      disabled={
+                        indicating === worker.id ||
+                        indicated.includes(`${worker.id}-${selectedJob[worker.id]}`)
+                      }
+                      onClick={() => handleIndicate(worker.id)}
+                    >
                       {indicating === worker.id
                         ? "Indicando..."
                         : indicated.includes(`${worker.id}-${selectedJob[worker.id]}`)
                         ? "Ya indicado"
                         : "Indicar para esta oferta"}
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
@@ -218,6 +265,5 @@ export default function CompanyWorkersPage() {
           </div>
         )}
       </div>
-    </main>
   );
 }

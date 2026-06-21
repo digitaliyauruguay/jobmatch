@@ -1,15 +1,16 @@
 /*
  * Archivo: src/app/(public)/workers/page.tsx
- * Qué hace: Página pública de trabajadores disponibles. Muestra perfiles
- * básicos sin datos sensibles (sin teléfono, sin CV, sin apellido).
- * Cualquier intento de ver el perfil completo o contactar redirige
- * al registro o login.
+ * Qué hace: Página pública de trabajadores disponibles con tema
+ * oscuro JobMatch. Muestra perfiles básicos sin datos sensibles,
+ * con filtros por categoría y departamento. Cualquier intento de
+ * ver el perfil completo o contactar redirige al registro o login.
  */
 
 "use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Badge from "@/components/ui/Badge";
 
 type Worker = {
   id: string;
@@ -18,6 +19,11 @@ type Worker = {
   availability: string;
   description: string | null;
   categories: { category: { name: string } }[];
+};
+
+type Category = {
+  id: string;
+  name: string;
 };
 
 const AVAILABILITY_LABELS: Record<string, string> = {
@@ -38,71 +44,108 @@ const DEPARTMENT_LABELS: Record<string, string> = {
 
 export default function PublicWorkersPage() {
   const [workers, setWorkers] = useState<Worker[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState({
+    categoryId: "",
+    department: "",
+  });
+
+  const fetchWorkers = async () => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (filters.categoryId) params.append("categoryId", filters.categoryId);
+    if (filters.department) params.append("department", filters.department);
+
+    const res = await fetch(`/api/workers?${params.toString()}`);
+    const data = await res.json();
+    setWorkers(data);
+    setLoading(false);
+  };
 
   useEffect(() => {
-    fetch("/api/workers")
-      .then((r) => r.json())
-      .then((data) => {
-        setWorkers(data);
-        setLoading(false);
-      });
+    fetch("/api/categories").then((r) => r.json()).then(setCategories);
+    fetchWorkers();
   }, []);
 
-  return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-medium">Trabajadores disponibles</h1>
-          <p className="text-sm text-gray-500">{workers.length} trabajadores</p>
-        </div>
+  useEffect(() => {
+    fetchWorkers();
+  }, [filters]);
 
-        {loading ? (
-          <p className="text-gray-500 text-sm">Cargando...</p>
-        ) : workers.length === 0 ? (
-          <p className="text-gray-500 text-sm">No hay trabajadores disponibles.</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {workers.map((worker) => (
-              <div
-                key={worker.id}
-                className="bg-white rounded-lg border border-gray-200 p-5 flex flex-col justify-between"
-              >
-                <div>
-                  <p className="font-medium text-gray-900">{worker.firstName}</p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {DEPARTMENT_LABELS[worker.department]}
-                  </p>
-                  <p className="text-xs text-blue-600 mt-1">
-                    {AVAILABILITY_LABELS[worker.availability]}
-                  </p>
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {worker.categories.map((c) => (
-                      <span
-                        key={c.category.name}
-                        className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs"
-                      >
-                        {c.category.name}
-                      </span>
-                    ))}
-                  </div>
-                  {worker.description && (
-                    <p className="text-sm text-gray-600 mt-2 line-clamp-2">
-                      {worker.description}
-                    </p>
-                  )}
-                </div>
-                <Link
-                  href="/register"
-                  className="mt-4 block w-full text-center bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                >
-                  Ver perfil completo
-                </Link>
-              </div>
-            ))}
-          </div>
-        )}
+  return (
+    <main className="max-w-7xl mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-medium text-jm-text">Trabajadores disponibles</h1>
+        <p className="text-sm text-jm-text-tertiary">{workers.length} trabajadores</p>
       </div>
+
+      {/* Filtros */}
+      <div className="grid grid-cols-2 gap-3 mb-6 max-w-md">
+        <select
+          value={filters.categoryId}
+          onChange={(e) => setFilters({ ...filters, categoryId: e.target.value })}
+          className="bg-jm-card border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer"
+        >
+          <option value="">Todas las categorías</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+
+        <select
+          value={filters.department}
+          onChange={(e) => setFilters({ ...filters, department: e.target.value })}
+          className="bg-jm-card border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer"
+        >
+          <option value="">Todos los departamentos</option>
+          {Object.entries(DEPARTMENT_LABELS).map(([k, v]) => (
+            <option key={k} value={k}>{v}</option>
+          ))}
+        </select>
+      </div>
+
+      {loading ? (
+        <p className="text-jm-text-tertiary text-sm">Cargando...</p>
+      ) : workers.length === 0 ? (
+        <p className="text-jm-text-tertiary text-sm">No hay trabajadores disponibles.</p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {workers.map((worker) => (
+            <div
+              key={worker.id}
+              className="bg-jm-card border border-jm-border rounded-lg p-5 flex flex-col justify-between"
+            >
+              <div>
+                <p className="font-medium text-jm-text">{worker.firstName}</p>
+                <p className="text-sm text-jm-text-secondary mt-1">
+                  {DEPARTMENT_LABELS[worker.department]}
+                </p>
+                <p className="text-xs text-jm-cyan-light mt-1">
+                  {AVAILABILITY_LABELS[worker.availability]}
+                </p>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {worker.categories.map((c) => (
+                    <Badge key={c.category.name} variant="cyan">
+                      {c.category.name}
+                    </Badge>
+                  ))}
+                </div>
+                {worker.description && (
+                  <p className="text-sm text-jm-text-secondary mt-2 line-clamp-2">
+                    {worker.description}
+                  </p>
+                )}
+              </div>
+              <Link
+                href="/register"
+                className="mt-4 block w-full text-center bg-jm-magenta text-white py-2 rounded-lg text-sm font-medium shadow-[0_0_0_0_rgba(212,83,126,0)] hover:shadow-[0_0_20px_2px_rgba(212,83,126,0.45)] hover:bg-jm-magenta-light hover:text-jm-magenta-bg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 cursor-pointer"
+              >
+                Ver perfil completo
+              </Link>
+            </div>
+          ))}
+        </div>
+      )}
     </main>
   );
 }

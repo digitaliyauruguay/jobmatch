@@ -4,11 +4,13 @@
  * barra de navegación de todos los dashboards. Muestra un ícono de campana
  * con un contador de notificaciones no leídas. Al hacer clic despliega
  * un panel con todas las notificaciones y permite marcarlas como leídas.
+ * Tema oscuro JobMatch, misma lógica funcional.
  */
 
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { IconBell } from "@tabler/icons-react";
 
 type Notification = {
   id: string;
@@ -32,12 +34,10 @@ export default function NotificationBell() {
 
   useEffect(() => {
     fetchNotifications();
-    // Polling cada 30 segundos para notificaciones nuevas
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  // Cerrar al hacer clic fuera
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
@@ -72,50 +72,37 @@ export default function NotificationBell() {
     <div className="relative" ref={ref}>
       <button
         onClick={handleOpen}
-        className="relative p-2 text-gray-500 hover:text-gray-900 transition-colors"
+        className="relative p-2 text-jm-text-tertiary hover:text-jm-text transition-colors cursor-pointer"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="w-6 h-6"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={1.5}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"
-          />
-        </svg>
+        <IconBell size={20} />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
+          <span className="absolute top-1 right-1 w-4 h-4 bg-jm-red text-jm-red-light text-xs rounded-full flex items-center justify-center font-medium">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg border border-gray-200 shadow-lg z-50">
-          <div className="px-4 py-3 border-b border-gray-100">
-            <p className="text-sm font-medium">Notificaciones</p>
+        <div className="absolute right-0 mt-2 w-80 bg-jm-card border border-jm-border rounded-lg shadow-lg z-50">
+          <div className="px-4 py-3 border-b border-jm-border">
+            <p className="text-sm font-medium text-jm-text">Notificaciones</p>
           </div>
 
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center py-6">
+              <p className="text-sm text-jm-text-tertiary text-center py-6">
                 No tenés notificaciones.
               </p>
             ) : (
               notifications.map((n) => (
                 <div
                   key={n.id}
-                  className={`px-4 py-3 border-b border-gray-50 last:border-0 ${
-                    !n.read ? "bg-blue-50" : ""
+                  className={`px-4 py-3 border-b border-jm-border last:border-0 ${
+                    !n.read ? "bg-jm-magenta-bg" : ""
                   }`}
                 >
-                  <p className="text-sm text-gray-800">{n.message}</p>
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-sm text-jm-text">{n.message}</p>
+                  <p className="text-xs text-jm-text-tertiary mt-1">
                     {formatDate(n.createdAt)}
                   </p>
                 </div>

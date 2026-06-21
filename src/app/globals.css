@@ -1,8 +1,16 @@
+/*
+ * Archivo: src/app/globals.css
+ * Qué hace: Define la paleta de colores global de JobMatch (tema oscuro)
+ * y los estilos base de la aplicación. Todos los colores custom (jm-*)
+ * quedan disponibles como clases de Tailwind (bg-jm-black, text-jm-magenta, etc.)
+ * para usar consistentemente en toda la app sin repetir valores hex.
+ */
+
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #000000;
+  --foreground: #f3f1fa;
 }
 
 @theme inline {
@@ -10,17 +18,48 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Fondos */
+  --color-jm-black: #000000;
+  --color-jm-card: #111014;
+  --color-jm-card-hover: #1c1b22;
+  --color-jm-border: #232229;
+  --color-jm-border-soft: #2a2930;
+
+  /* Texto */
+  --color-jm-text: #f3f1fa;
+  --color-jm-text-secondary: #84818f;
+  --color-jm-text-tertiary: #6e6c7a;
+
+  /* Acento principal — magenta (acción) */
+  --color-jm-magenta: #993556;
+  --color-jm-magenta-light: #ED93B1;
+  --color-jm-magenta-bg: #2c1822;
+
+  /* Acento secundario — cian (información / pendiente / categoría) */
+  --color-jm-cyan: #2DA3AD;
+  --color-jm-cyan-light: #7FD4DD;
+  --color-jm-cyan-bg: #0a2e33;
+
+  /* Semánticos */
+  --color-jm-green: #1d9e75;
+  --color-jm-green-light: #5dcaa5;
+  --color-jm-green-bg: #0e2b26;
+
+  --color-jm-red: #a32d2d;
+  --color-jm-red-light: #f09595;
+  --color-jm-red-bg: #2e1414;
+
+  --color-jm-gray: #6e6c7a;
+  --color-jm-gray-light: #a8a5b5;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
 }
