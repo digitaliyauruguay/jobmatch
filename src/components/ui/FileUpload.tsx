@@ -1,15 +1,17 @@
 /*
  * Archivo: src/components/ui/FileUpload.tsx
  * Qué hace: Componente reutilizable para subir archivos a Cloudinary.
- * Acepta fotos de perfil, logos de empresas y CVs en PDF.
- * Muestra una vista previa de la imagen seleccionada y el nombre
- * del archivo en caso de PDF. Llama al endpoint /api/upload y
- * devuelve la URL del archivo subido via onUpload.
+ * Acepta fotos de perfil, logos de empresas y CVs en PDF. Muestra una
+ * vista previa de la imagen seleccionada, o un indicador con ícono y
+ * "CV cargado" cuando ya existe un archivo guardado (currentUrl) o se
+ * subió uno nuevo. Llama al endpoint /api/upload y devuelve la URL
+ * del archivo subido via onUpload. Tema oscuro JobMatch.
  */
 
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { IconFileText, IconUpload } from "@tabler/icons-react";
 
 type FileUploadProps = {
   type: "photo" | "logo" | "cv";
@@ -26,12 +28,24 @@ export default function FileUpload({
 }: FileUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(currentUrl || null);
-  const [fileName, setFileName] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string | null>(
+    !["photo", "logo"].includes(type) && currentUrl ? "CV cargado" : null
+  );
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const isImage = type === "photo" || type === "logo";
   const accept = isImage ? "image/*" : "application/pdf";
+
+  // Si currentUrl cambia (por ejemplo al cargar el perfil de forma asíncrona),
+  // actualizamos la vista previa para reflejar el archivo ya guardado
+  useEffect(() => {
+    if (isImage) {
+      setPreview(currentUrl || null);
+    } else if (currentUrl) {
+      setFileName("CV cargado");
+    }
+  }, [currentUrl, isImage]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -77,55 +91,31 @@ export default function FileUpload({
 
   return (
     <div className="flex flex-col gap-2">
-      {label && <label className="text-sm text-gray-700">{label}</label>}
+      {label && <label className="text-sm text-jm-text-secondary">{label}</label>}
 
       <div
         onClick={() => inputRef.current?.click()}
-        className="border-2 border-dashed border-gray-200 rounded-lg p-4 text-center cursor-pointer hover:border-blue-400 transition-colors"
+        className="border-2 border-dashed border-jm-border rounded-lg p-4 text-center cursor-pointer hover:border-jm-magenta transition-colors"
       >
         {isImage && preview ? (
           <div className="flex flex-col items-center gap-2">
             <img
               src={preview}
               alt="Vista previa"
-              className="w-20 h-20 rounded-full object-cover"
+              className="w-20 h-20 rounded-full object-cover border border-jm-border"
             />
-            <p className="text-xs text-gray-500">Clic para cambiar</p>
+            <p className="text-xs text-jm-text-tertiary">Clic para cambiar</p>
           </div>
         ) : !isImage && fileName ? (
           <div className="flex flex-col items-center gap-2">
-            <svg
-              className="w-8 h-8 text-red-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
-            <p className="text-xs text-gray-700 font-medium">{fileName}</p>
-            <p className="text-xs text-gray-500">Clic para cambiar</p>
+            <IconFileText size={28} className="text-jm-cyan-light" />
+            <p className="text-xs text-jm-text font-medium">{fileName}</p>
+            <p className="text-xs text-jm-text-tertiary">Clic para cambiar</p>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2 py-2">
-            <svg
-              className="w-8 h-8 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-              />
-            </svg>
-            <p className="text-sm text-gray-500">
+            <IconUpload size={28} className="text-jm-text-tertiary" />
+            <p className="text-sm text-jm-text-tertiary">
               {uploading
                 ? "Subiendo..."
                 : isImage
@@ -136,7 +126,7 @@ export default function FileUpload({
         )}
       </div>
 
-      {error && <p className="text-red-500 text-xs">{error}</p>}
+      {error && <p className="text-jm-red-light text-xs">{error}</p>}
 
       <input
         ref={inputRef}

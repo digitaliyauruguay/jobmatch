@@ -1,9 +1,10 @@
 /*
  * Archivo: src/app/(worker)/worker/profile/edit/page.tsx
- * Qué hace: Página para que el trabajador edite su perfil después
- * del registro. Permite actualizar todos sus datos, cambiar la foto
- * de perfil, subir un nuevo CV y modificar sus categorías.
+ * Qué hace: Página para que el trabajador edite su perfil con tema
+ * oscuro JobMatch. Permite actualizar todos sus datos, cambiar la
+ * foto de perfil, subir un nuevo CV y modificar sus categorías.
  * Usa el endpoint PUT /api/workers/me para guardar los cambios.
+ * La navbar la provee el layout compartido (worker)/layout.tsx.
  */
 
 "use client";
@@ -12,6 +13,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import FileUpload from "@/components/ui/FileUpload";
+import { IconArrowLeft } from "@tabler/icons-react";
 
 type Category = {
   id: string;
@@ -129,145 +131,144 @@ export default function EditWorkerProfilePage() {
 
   if (!ready) {
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-500 text-sm">Cargando perfil...</p>
-      </main>
+      <div className="max-w-2xl mx-auto px-4 py-8 text-center">
+        <p className="text-jm-text-tertiary text-sm">Cargando perfil...</p>
+      </div>
     );
   }
-console.log("categories IDs:", categories.map(c => c.id));
-console.log("selectedCategories:", selectedCategories);
+
   return (
-    <main className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-medium">Editar perfil</h1>
-          <Link href="/worker/dashboard" className="text-sm text-gray-600 hover:text-gray-900">
-            ← Volver
-          </Link>
-        </div>
-      </nav>
+    <div className="max-w-2xl mx-auto px-4 py-8">
+      <Link
+        href="/worker/dashboard"
+        className="flex items-center gap-1.5 text-sm text-jm-text-secondary hover:text-jm-text transition-colors cursor-pointer mb-6"
+      >
+        <IconArrowLeft size={16} />
+        Volver
+      </Link>
 
-      <div className="max-w-2xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-lg border border-gray-200 p-6 flex flex-col gap-5">
+      <h1 className="text-xl font-medium text-jm-text mb-6">Editar perfil</h1>
 
-          <FileUpload
-            type="photo"
-            label="Foto de perfil"
-            currentUrl={form.photo}
-            onUpload={(url) => setForm({ ...form, photo: url })}
-          />
+      <div className="bg-jm-card border border-jm-border rounded-2xl p-6 flex flex-col gap-5">
+        <FileUpload
+          type="photo"
+          label="Foto de perfil"
+          currentUrl={form.photo}
+          onUpload={(url) => setForm({ ...form, photo: url })}
+        />
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1">
-              <label className="text-sm text-gray-700">Nombre</label>
-              <input
-                type="text"
-                value={form.firstName}
-                onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-                className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-sm text-gray-700">Apellido</label>
-              <input
-                type="text"
-                value={form.lastName}
-                onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-                className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
-              />
-            </div>
-          </div>
-
+        <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col gap-1">
-            <label className="text-sm text-gray-700">Teléfono</label>
+            <label className="text-sm text-jm-text-secondary">Nombre</label>
             <input
-              type="tel"
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
-              placeholder="09X XXX XXX"
+              type="text"
+              value={form.firstName}
+              onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+              className="bg-jm-card-hover border border-jm-border rounded-lg px-4 py-2.5 text-sm text-jm-text focus:outline-none focus:border-jm-magenta"
             />
           </div>
-
           <div className="flex flex-col gap-1">
-            <label className="text-sm text-gray-700">Departamento</label>
-            <select
-              value={form.department}
-              onChange={(e) => setForm({ ...form, department: e.target.value })}
-              className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
-            >
-              <option value="">Seleccioná tu departamento</option>
-              {DEPARTMENTS.map((d) => (
-                <option key={d} value={d}>{DEPARTMENT_LABELS[d]}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-sm text-gray-700">Disponibilidad</label>
-            <select
-              value={form.availability}
-              onChange={(e) => setForm({ ...form, availability: e.target.value })}
-              className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
-            >
-              <option value="">¿Cuándo podés empezar?</option>
-              {Object.entries(AVAILABILITY_LABELS).map(([k, v]) => (
-                <option key={k} value={k}>{v}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-sm text-gray-700">Sobre vos (opcional)</label>
-            <textarea
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 resize-none"
-              rows={3}
-              placeholder="Contanos algo sobre vos..."
+            <label className="text-sm text-jm-text-secondary">Apellido</label>
+            <input
+              type="text"
+              value={form.lastName}
+              onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+              className="bg-jm-card-hover border border-jm-border rounded-lg px-4 py-2.5 text-sm text-jm-text focus:outline-none focus:border-jm-magenta"
             />
           </div>
-
-          <FileUpload
-            type="cv"
-            label="CV en PDF (opcional)"
-            currentUrl={form.cvUrl}
-            onUpload={(url) => setForm({ ...form, cvUrl: url })}
-          />
-
-          <div className="flex flex-wrap gap-2">
-  {categories.map((cat) => {
-    const isSelected = selectedCategories.includes(cat.id);
-    console.log(`cat.id: ${cat.id} | isSelected: ${isSelected}`);
-    return (
-      <button
-  key={cat.id}
-  type="button"
-  onClick={() => toggleCategory(cat.id)}
-  style={{
-    backgroundColor: isSelected ? "#2563eb" : "#f3f4f6",
-    color: isSelected ? "white" : "#374151",
-  }}
-  className="px-3 py-1.5 rounded-lg text-sm transition-colors"
->
-  {cat.name}
-</button>
-    );
-  })}
-</div>
-
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          {success && <p className="text-green-600 text-sm">Perfil actualizado correctamente.</p>}
-
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="bg-blue-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
-          >
-            {loading ? "Guardando..." : "Guardar cambios"}
-          </button>
         </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-sm text-jm-text-secondary">Teléfono</label>
+          <input
+            type="tel"
+            value={form.phone}
+            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            className="bg-jm-card-hover border border-jm-border rounded-lg px-4 py-2.5 text-sm text-jm-text focus:outline-none focus:border-jm-magenta"
+            placeholder="09X XXX XXX"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-sm text-jm-text-secondary">Departamento</label>
+          <select
+            value={form.department}
+            onChange={(e) => setForm({ ...form, department: e.target.value })}
+            className="bg-jm-card-hover border border-jm-border rounded-lg px-4 py-2.5 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer"
+          >
+            <option value="">Seleccioná tu departamento</option>
+            {DEPARTMENTS.map((d) => (
+              <option key={d} value={d}>{DEPARTMENT_LABELS[d]}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-sm text-jm-text-secondary">Disponibilidad</label>
+          <select
+            value={form.availability}
+            onChange={(e) => setForm({ ...form, availability: e.target.value })}
+            className="bg-jm-card-hover border border-jm-border rounded-lg px-4 py-2.5 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer"
+          >
+            <option value="">¿Cuándo podés empezar?</option>
+            {Object.entries(AVAILABILITY_LABELS).map(([k, v]) => (
+              <option key={k} value={k}>{v}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-sm text-jm-text-secondary">Sobre vos (opcional)</label>
+          <textarea
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            className="bg-jm-card-hover border border-jm-border rounded-lg px-4 py-2.5 text-sm text-jm-text focus:outline-none focus:border-jm-magenta resize-none"
+            rows={3}
+            placeholder="Contanos algo sobre vos..."
+          />
+        </div>
+
+        <FileUpload
+          type="cv"
+          label="CV en PDF (opcional)"
+          currentUrl={form.cvUrl}
+          onUpload={(url) => setForm({ ...form, cvUrl: url })}
+        />
+
+        <div className="flex flex-col gap-2">
+          <label className="text-sm text-jm-text-secondary">Rubros en los que podés trabajar</label>
+          <div className="flex flex-wrap gap-2">
+            {categories.map((cat) => {
+              const isSelected = selectedCategories.includes(cat.id);
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => toggleCategory(cat.id)}
+                  style={{
+                    backgroundColor: isSelected ? "#993556" : "#1c1b22",
+                    color: isSelected ? "#ffffff" : "#84818f",
+                  }}
+                  className="px-3 py-1.5 rounded-lg text-sm transition-colors cursor-pointer"
+                >
+                  {cat.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {error && <p className="text-jm-red-light text-sm">{error}</p>}
+        {success && <p className="text-jm-green-light text-sm">Perfil actualizado correctamente.</p>}
+
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          className="bg-jm-magenta text-white rounded-lg py-2.5 text-sm font-medium shadow-[0_0_0_0_rgba(212,83,126,0)] hover:shadow-[0_0_20px_2px_rgba(212,83,126,0.45)] hover:bg-jm-magenta-light hover:text-jm-magenta-bg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+        >
+          {loading ? "Guardando..." : "Guardar cambios"}
+        </button>
       </div>
-    </main>
+    </div>
   );
 }
