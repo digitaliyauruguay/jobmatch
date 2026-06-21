@@ -1,83 +1,79 @@
 /*
- * Archivo: src/app/(admin)/dashboard/page.tsx
- * Qué hace: Dashboard del administrador. Es la página principal
- * a la que llega el admin después de loguear. Desde aquí puede
- * navegar a aprobar usuarios, gestionar ofertas, y moderar
- * la plataforma.
+ * Archivo: src/app/(admin)/admin/dashboard/page.tsx
+ * Qué hace: Dashboard del administrador con tema oscuro JobMatch.
+ * Es la página principal a la que llega el admin después de loguear.
+ * Desde aquí puede navegar a aprobar usuarios, gestionar ofertas,
+ * y moderar la plataforma. La navbar la provee el layout compartido.
  */
 
 "use client";
 
-import NotificationBell from "@/components/ui/NotificationBell";
-import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
+import {
+  IconUserCheck,
+  IconBriefcase,
+  IconClipboardList,
+  IconMessageExclamation,
+} from "@tabler/icons-react";
 
 export default function AdminDashboard() {
-  const { data: session } = useSession();
-
   return (
-    <main className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-medium">JobMatch Admin</h1>
-          <div className="flex items-center gap-4">
-  <span className="text-sm text-gray-600">{session?.user?.email}</span>
-  <NotificationBell />
-  <button
-    onClick={() => signOut({ callbackUrl: "/login" })}
-    className="text-sm text-gray-500 hover:text-gray-900"
-  >
-    Salir
-  </button>
-</div>
-        </div>
-      </nav>
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      <h1 className="text-2xl font-medium text-jm-text mb-6">Panel de administración</h1>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <h2 className="text-2xl font-medium mb-6">Panel de administración</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Link
+          href="/admin/users"
+          className="bg-jm-card border border-jm-border p-6 rounded-2xl hover:border-jm-magenta transition-colors cursor-pointer"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <IconUserCheck size={20} className="text-jm-cyan-light" />
+            <h2 className="text-lg font-medium text-jm-text">Usuarios pendientes</h2>
+          </div>
+          <p className="text-jm-text-secondary text-sm">
+            Aprobar o rechazar nuevas cuentas de trabajadores y empresas
+          </p>
+        </Link>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Tarjeta de usuarios pendientes */}
-          <Link href="/admin/users">
-            <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-              <h3 className="text-lg font-medium mb-2">Usuarios pendientes</h3>
-              <p className="text-gray-600 text-sm">
-                Aprobar o rechazar nuevas cuentas de trabajadores y empresas
-              </p>
-            </div>
-          </Link>
+        <Link
+          href="/admin/jobs"
+          className="bg-jm-card border border-jm-border p-6 rounded-2xl hover:border-jm-magenta transition-colors cursor-pointer"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <IconBriefcase size={20} className="text-jm-cyan-light" />
+            <h2 className="text-lg font-medium text-jm-text">Gestionar ofertas</h2>
+          </div>
+          <p className="text-jm-text-secondary text-sm">
+            Ver, bloquear o eliminar ofertas de trabajo
+          </p>
+        </Link>
 
-          {/* Tarjeta de ofertas */}
-          <Link href="/admin/jobs">
-            <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-              <h3 className="text-lg font-medium mb-2">Gestionar ofertas</h3>
-              <p className="text-gray-600 text-sm">
-                Ver, bloquear o eliminar ofertas de trabajo
-              </p>
-            </div>
-          </Link>
+        <Link
+          href="/admin/applications"
+          className="bg-jm-card border border-jm-border p-6 rounded-2xl hover:border-jm-magenta transition-colors cursor-pointer"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <IconClipboardList size={20} className="text-jm-cyan-light" />
+            <h2 className="text-lg font-medium text-jm-text">Postulaciones</h2>
+          </div>
+          <p className="text-jm-text-secondary text-sm">
+            Ver todas las postulaciones en la plataforma
+          </p>
+        </Link>
 
-          {/* Tarjeta de postulaciones */}
-          <Link href="/admin/applications">
-            <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-              <h3 className="text-lg font-medium mb-2">Postulaciones</h3>
-              <p className="text-gray-600 text-sm">
-                Ver todas las postulaciones en la plataforma
-              </p>
-            </div>
-          </Link>
-
-          {/* Tarjeta de observaciones */}
-          <Link href="/admin/observations">
-            <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-              <h3 className="text-lg font-medium mb-2">Observaciones</h3>
-              <p className="text-gray-600 text-sm">
-                Hacer observaciones a perfiles u ofertas
-              </p>
-            </div>
-          </Link>
-        </div>
+        <Link
+          href="/admin/observations"
+          className="bg-jm-card border border-jm-border p-6 rounded-2xl hover:border-jm-magenta transition-colors cursor-pointer"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <IconMessageExclamation size={20} className="text-jm-cyan-light" />
+            <h2 className="text-lg font-medium text-jm-text">Observaciones</h2>
+          </div>
+          <p className="text-jm-text-secondary text-sm">
+            Hacer observaciones a perfiles u ofertas
+          </p>
+        </Link>
       </div>
-    </main>
+    </div>
   );
 }
