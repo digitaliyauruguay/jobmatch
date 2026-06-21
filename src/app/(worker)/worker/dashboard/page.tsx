@@ -1,25 +1,21 @@
 /*
  * Archivo: src/app/(worker)/worker/dashboard/page.tsx
  * Qué hace: Dashboard principal del trabajador con tema oscuro JobMatch.
- * Navbar flotante con logo placeholder, todos los elementos clickeables
- * muestran cursor pointer. Misma lógica funcional, solo cambia el
- * theming visual y la estructura de la navbar.
+ * Muestra ofertas disponibles con filtros y postulaciones organizadas
+ * por estado y origen. El trabajador puede postularse a ofertas y
+ * responder indicaciones de empresas. La navbar ahora la provee el
+ * layout compartido (worker)/layout.tsx.
  */
 
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession, signOut } from "next-auth/react";
-import NotificationBell from "@/components/ui/NotificationBell";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
-import Link from "next/link";
 import {
   IconClock,
   IconCheck,
   IconX,
-  IconBriefcase,
-  IconLogout,
   IconFileText,
   IconExternalLink,
   IconDownload,
@@ -80,7 +76,6 @@ const DEPARTMENT_LABELS: Record<string, string> = {
 };
 
 export default function WorkerDashboard() {
-  const { data: session } = useSession();
   const [activeSection, setActiveSection] = useState<"jobs" | "applications">("jobs");
   const [profile, setProfile] = useState<{ firstName: string; photo: string | null; cvUrl: string | null } | null>(null);
 
@@ -204,75 +199,31 @@ export default function WorkerDashboard() {
   const filteredApplications = applications.filter((a) => a.origin === appTab);
 
   return (
-    <main className="min-h-screen bg-jm-black">
-      <div className="sticky top-0 z-40 px-4 pt-4 pb-2 bg-jm-black">
-        <nav className="max-w-7xl mx-auto bg-jm-card/90 backdrop-blur-md border border-jm-border rounded-2xl">
-          <div className="px-5 py-3 flex justify-between items-center">
-            <Link href="/worker/dashboard" className="flex items-center gap-2 cursor-pointer group">
-              <IconBriefcase
-                size={22}
-                className="text-jm-magenta-light transition-transform duration-200 group-hover:scale-110 group-hover:rotate-[-6deg]"
-              />
-              <span className="text-lg font-medium text-jm-text transition-colors duration-200 group-hover:text-jm-magenta-light">
-                JobMatch
-              </span>
-            </Link>
-            <div className="flex items-center gap-4">
-              <Link href="/worker/profile/edit" className="flex items-center gap-3 cursor-pointer group">
-                {profile?.photo ? (
-                  <img
-                    src={profile.photo}
-                    alt="Foto de perfil"
-                    className="w-8 h-8 rounded-full object-cover border border-jm-border"
-                  />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-jm-magenta flex items-center justify-center text-jm-magenta-light text-sm font-medium">
-                    {profile?.firstName?.[0] || session?.user?.email?.[0]?.toUpperCase()}
-                  </div>
-                )}
-                <span className="text-sm text-jm-text-secondary group-hover:text-jm-magenta-light transition-colors">
-                  {profile?.firstName || session?.user?.email}
-                </span>
-              </Link>
-              <NotificationBell />
-              <button
-                onClick={() => signOut({ callbackUrl: "/login" })}
-                className="flex items-center gap-1.5 text-sm text-jm-text-tertiary hover:text-jm-text transition-colors cursor-pointer"
-              >
-                <IconLogout size={16} />
-                Salir
-              </button>
-            </div>
-          </div>
-        </nav>
+    <div className="max-w-7xl mx-auto px-4">
+      <div className="flex gap-6 border-b border-jm-border mt-2 mb-6">
+        <button
+          onClick={() => setActiveSection("jobs")}
+          className={`py-3 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
+            activeSection === "jobs"
+              ? "border-jm-magenta text-jm-magenta-light"
+              : "border-transparent text-jm-text-tertiary hover:text-jm-text"
+          }`}
+        >
+          Ofertas disponibles
+        </button>
+        <button
+          onClick={() => setActiveSection("applications")}
+          className={`py-3 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
+            activeSection === "applications"
+              ? "border-jm-magenta text-jm-magenta-light"
+              : "border-transparent text-jm-text-tertiary hover:text-jm-text"
+          }`}
+        >
+          Mis postulaciones
+        </button>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 mt-6 mb-2">
-        <div className="flex gap-6 border-b border-jm-border">
-          <button
-            onClick={() => setActiveSection("jobs")}
-            className={`py-3 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
-              activeSection === "jobs"
-                ? "border-jm-magenta text-jm-magenta-light"
-                : "border-transparent text-jm-text-tertiary hover:text-jm-text"
-            }`}
-          >
-            Ofertas disponibles
-          </button>
-          <button
-            onClick={() => setActiveSection("applications")}
-            className={`py-3 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
-              activeSection === "applications"
-                ? "border-jm-magenta text-jm-magenta-light"
-                : "border-transparent text-jm-text-tertiary hover:text-jm-text"
-            }`}
-          >
-            Mis postulaciones
-          </button>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="py-2 pb-8">
         {activeSection === "jobs" && (
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
@@ -372,7 +323,7 @@ export default function WorkerDashboard() {
           </>
         )}
 
-         {activeSection === "applications" && profile?.cvUrl && (
+        {activeSection === "applications" && profile?.cvUrl && (
           <div className="bg-jm-card border border-jm-border rounded-2xl p-5 mb-6 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-xl bg-jm-cyan-bg flex items-center justify-center">
@@ -385,23 +336,23 @@ export default function WorkerDashboard() {
             </div>
             <div className="flex gap-2">
               
-              <a href={`https://docs.google.com/viewer?url=${encodeURIComponent(profile.cvUrl)}&embedded=false`}
-  target="_blank"
-  rel="noopener noreferrer"
-  className="flex items-center gap-1.5 text-xs font-medium text-jm-cyan-light bg-jm-cyan-bg px-3 py-2 rounded-lg hover:bg-jm-cyan/20 transition-colors cursor-pointer"
->
-  <IconExternalLink size={14} />
-  Abrir
-</a>
-
-  <a href={`https://docs.google.com/viewer?url=${encodeURIComponent(profile.cvUrl)}&embedded=false`}
-  target="_blank"
-  rel="noopener noreferrer"
-  className="flex items-center gap-1.5 text-xs font-medium text-jm-magenta-light bg-jm-magenta-bg px-3 py-2 rounded-lg hover:bg-jm-magenta/20 transition-colors cursor-pointer"
->
-  <IconDownload size={14} />
-  Descargar
-</a>
+                <a href={`https://docs.google.com/viewer?url=${encodeURIComponent(profile.cvUrl)}&embedded=false`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-xs font-medium text-jm-cyan-light bg-jm-cyan-bg px-3 py-2 rounded-lg hover:bg-jm-cyan/20 transition-colors cursor-pointer"
+              >
+                <IconExternalLink size={14} />
+                Abrir
+              </a>
+              
+                <a href={`https://docs.google.com/viewer?url=${encodeURIComponent(profile.cvUrl)}&embedded=false`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-xs font-medium text-jm-magenta-light bg-jm-magenta-bg px-3 py-2 rounded-lg hover:bg-jm-magenta/20 transition-colors cursor-pointer"
+              >
+                <IconDownload size={14} />
+                Descargar
+              </a>
             </div>
           </div>
         )}
@@ -413,7 +364,7 @@ export default function WorkerDashboard() {
                 onClick={() => setAppTab("SELF")}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                   appTab === "SELF"
-                    ? "bg-jm-magenta text-jm-magenta-light"
+                    ? "bg-jm-magenta text-white"
                     : "bg-jm-card text-jm-text-secondary border border-jm-border"
                 }`}
               >
@@ -423,7 +374,7 @@ export default function WorkerDashboard() {
                 onClick={() => setAppTab("INDICATED")}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                   appTab === "INDICATED"
-                    ? "bg-jm-magenta text-jm-magenta-light"
+                    ? "bg-jm-magenta text-white"
                     : "bg-jm-card text-jm-text-secondary border border-jm-border"
                 }`}
               >
@@ -513,6 +464,6 @@ export default function WorkerDashboard() {
           </>
         )}
       </div>
-    </main>
+    </div>
   );
 }
