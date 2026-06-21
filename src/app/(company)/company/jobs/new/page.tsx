@@ -1,17 +1,18 @@
 /*
  * Archivo: src/app/(company)/company/jobs/new/page.tsx
- * Qué hace: Página para que una empresa cree nuevas ofertas de trabajo.
- * Permite seleccionar categoría, departamento, modalidad, tipo de trabajo
- * y completar la información de la oferta. Envía los datos a /api/jobs
- * y redirige al dashboard de la empresa en caso de éxito.
+ * Qué hace: Página para que una empresa cree nuevas ofertas de trabajo
+ * con tema oscuro JobMatch. Permite seleccionar categoría, departamento,
+ * modalidad, tipo de trabajo y completar la información de la oferta.
+ * Envía los datos a /api/jobs y redirige al dashboard de la empresa
+ * en caso de éxito. La navbar la provee el layout compartido.
  */
 
 "use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { IconArrowLeft } from "@tabler/icons-react";
 
 type Category = {
   id: string;
@@ -19,7 +20,6 @@ type Category = {
 };
 
 export default function CreateJobPage() {
-  const { data: session } = useSession();
   const router = useRouter();
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -92,168 +92,161 @@ export default function CreateJobPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      {/* NAV */}
-      <nav className="bg-white border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-medium">Crear oferta</h1>
+    <div className="max-w-3xl mx-auto px-4 py-8">
+      <Link
+        href="/company/dashboard"
+        className="flex items-center gap-1.5 text-sm text-jm-text-secondary hover:text-jm-text transition-colors cursor-pointer mb-6"
+      >
+        <IconArrowLeft size={16} />
+        Volver
+      </Link>
 
-          <Link
-            href="/company/dashboard"
-            className="text-sm text-gray-600 hover:text-gray-900"
-          >
-            Volver
-          </Link>
+      <h1 className="text-xl font-medium text-jm-text mb-6">Crear oferta</h1>
+
+      <form
+        onSubmit={handleSubmit}
+        className="bg-jm-card border border-jm-border rounded-2xl p-6 space-y-5"
+      >
+        {/* Título */}
+        <div>
+          <label className="text-sm font-medium text-jm-text-secondary">Título</label>
+          <input
+            type="text"
+            name="title"
+            value={form.title}
+            onChange={handleChange}
+            className="w-full mt-1 bg-jm-card-hover border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta"
+            placeholder="Ej: Reponedor para supermercado"
+            required
+          />
         </div>
-      </nav>
 
-      {/* FORM */}
-      <div className="max-w-3xl mx-auto px-4 py-8">
-        <form
-          onSubmit={handleSubmit}
-          className="bg-white border border-gray-200 rounded-lg p-6 space-y-5"
-        >
-          {/* Título */}
-          <div>
-            <label className="text-sm font-medium">Título</label>
-            <input
-              type="text"
-              name="title"
-              value={form.title}
-              onChange={handleChange}
-              className="w-full mt-1 border rounded-lg px-3 py-2 text-sm"
-              placeholder="Ej: Reponedor para supermercado"
-              required
-            />
-          </div>
+        {/* Descripción */}
+        <div>
+          <label className="text-sm font-medium text-jm-text-secondary">Descripción</label>
+          <textarea
+            name="description"
+            value={form.description}
+            onChange={handleChange}
+            className="w-full mt-1 bg-jm-card-hover border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta min-h-[120px]"
+            placeholder="Describe el puesto, tareas, requisitos, etc."
+            required
+          />
+        </div>
 
-          {/* Descripción */}
-          <div>
-            <label className="text-sm font-medium">Descripción</label>
-            <textarea
-              name="description"
-              value={form.description}
-              onChange={handleChange}
-              className="w-full mt-1 border rounded-lg px-3 py-2 text-sm min-h-[120px]"
-              placeholder="Describe el puesto, tareas, requisitos, etc."
-              required
-            />
-          </div>
-
-          {/* Categoría */}
-          <div>
-            <label className="text-sm font-medium">Categoría</label>
-            <select
-              name="categoryId"
-              value={form.categoryId}
-              onChange={handleChange}
-              className="w-full mt-1 border rounded-lg px-3 py-2 text-sm"
-              required
-            >
-              <option value="">
-                {fetchingCategories ? "Cargando..." : "Seleccionar categoría"}
+        {/* Categoría */}
+        <div>
+          <label className="text-sm font-medium text-jm-text-secondary">Categoría</label>
+          <select
+            name="categoryId"
+            value={form.categoryId}
+            onChange={handleChange}
+            className="w-full mt-1 bg-jm-card-hover border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer"
+            required
+          >
+            <option value="">
+              {fetchingCategories ? "Cargando..." : "Seleccionar categoría"}
+            </option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
               </option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
-          </div>
+            ))}
+          </select>
+        </div>
 
-          {/* Departamento */}
-          <div>
-            <label className="text-sm font-medium">Departamento</label>
-            <select
-              name="department"
-              value={form.department}
-              onChange={handleChange}
-              className="w-full mt-1 border rounded-lg px-3 py-2 text-sm"
-              required
-            >
-              <option value="">Seleccionar</option>
-              <option value="MONTEVIDEO">Montevideo</option>
-              <option value="CANELONES">Canelones</option>
-              <option value="MALDONADO">Maldonado</option>
-              <option value="ROCHA">Rocha</option>
-              <option value="TREINTA_Y_TRES">Treinta y Tres</option>
-              <option value="CERRO_LARGO">Cerro Largo</option>
-              <option value="RIVERA">Rivera</option>
-              <option value="ARTIGAS">Artigas</option>
-              <option value="SALTO">Salto</option>
-              <option value="PAYSANDU">Paysandú</option>
-              <option value="RIO_NEGRO">Río Negro</option>
-              <option value="SORIANO">Soriano</option>
-              <option value="COLONIA">Colonia</option>
-              <option value="SAN_JOSE">San José</option>
-              <option value="FLORES">Flores</option>
-              <option value="FLORIDA">Florida</option>
-              <option value="DURAZNO">Durazno</option>
-              <option value="TACUAREMBO">Tacuarembó</option>
-              <option value="LAVALLEJA">Lavalleja</option>
-            </select>
-          </div>
+        {/* Departamento */}
+        <div>
+          <label className="text-sm font-medium text-jm-text-secondary">Departamento</label>
+          <select
+            name="department"
+            value={form.department}
+            onChange={handleChange}
+            className="w-full mt-1 bg-jm-card-hover border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer"
+            required
+          >
+            <option value="">Seleccionar</option>
+            <option value="MONTEVIDEO">Montevideo</option>
+            <option value="CANELONES">Canelones</option>
+            <option value="MALDONADO">Maldonado</option>
+            <option value="ROCHA">Rocha</option>
+            <option value="TREINTA_Y_TRES">Treinta y Tres</option>
+            <option value="CERRO_LARGO">Cerro Largo</option>
+            <option value="RIVERA">Rivera</option>
+            <option value="ARTIGAS">Artigas</option>
+            <option value="SALTO">Salto</option>
+            <option value="PAYSANDU">Paysandú</option>
+            <option value="RIO_NEGRO">Río Negro</option>
+            <option value="SORIANO">Soriano</option>
+            <option value="COLONIA">Colonia</option>
+            <option value="SAN_JOSE">San José</option>
+            <option value="FLORES">Flores</option>
+            <option value="FLORIDA">Florida</option>
+            <option value="DURAZNO">Durazno</option>
+            <option value="TACUAREMBO">Tacuarembó</option>
+            <option value="LAVALLEJA">Lavalleja</option>
+          </select>
+        </div>
 
-          {/* Modalidad */}
-          <div>
-            <label className="text-sm font-medium">Modalidad</label>
-            <select
-              name="modality"
-              value={form.modality}
-              onChange={handleChange}
-              className="w-full mt-1 border rounded-lg px-3 py-2 text-sm"
-              required
-            >
-              <option value="">Seleccionar</option>
-              <option value="PRESENTIAL">Presencial</option>
-              <option value="REMOTE">Remoto</option>
-              <option value="HYBRID">Híbrido</option>
-            </select>
-          </div>
+        {/* Modalidad */}
+        <div>
+          <label className="text-sm font-medium text-jm-text-secondary">Modalidad</label>
+          <select
+            name="modality"
+            value={form.modality}
+            onChange={handleChange}
+            className="w-full mt-1 bg-jm-card-hover border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer"
+            required
+          >
+            <option value="">Seleccionar</option>
+            <option value="PRESENTIAL">Presencial</option>
+            <option value="REMOTE">Remoto</option>
+            <option value="HYBRID">Híbrido</option>
+          </select>
+        </div>
 
-          {/* Tipo de trabajo */}
-          <div>
-            <label className="text-sm font-medium">Tipo de trabajo</label>
-            <select
-              name="jobType"
-              value={form.jobType}
-              onChange={handleChange}
-              className="w-full mt-1 border rounded-lg px-3 py-2 text-sm"
-              required
-            >
-              <option value="">Seleccionar</option>
-              <option value="FULL_TIME">Tiempo completo</option>
-              <option value="PART_TIME">Medio tiempo</option>
-              <option value="TEMPORARY">Temporal</option>
-              <option value="PROJECT">Por proyecto</option>
-            </select>
-          </div>
+        {/* Tipo de trabajo */}
+        <div>
+          <label className="text-sm font-medium text-jm-text-secondary">Tipo de trabajo</label>
+          <select
+            name="jobType"
+            value={form.jobType}
+            onChange={handleChange}
+            className="w-full mt-1 bg-jm-card-hover border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer"
+            required
+          >
+            <option value="">Seleccionar</option>
+            <option value="FULL_TIME">Tiempo completo</option>
+            <option value="PART_TIME">Medio tiempo</option>
+            <option value="TEMPORARY">Temporal</option>
+            <option value="PROJECT">Por proyecto</option>
+          </select>
+        </div>
 
-          {/* Salario */}
-          <div>
-            <label className="text-sm font-medium">Salario (opcional)</label>
-            <input
-              type="text"
-              name="salary"
-              value={form.salary}
-              onChange={handleChange}
-              className="w-full mt-1 border rounded-lg px-3 py-2 text-sm"
-              placeholder="Ej: $25.000 - $35.000"
-            />
-          </div>
+        {/* Salario */}
+        <div>
+          <label className="text-sm font-medium text-jm-text-secondary">Salario (opcional)</label>
+          <input
+            type="text"
+            name="salary"
+            value={form.salary}
+            onChange={handleChange}
+            className="w-full mt-1 bg-jm-card-hover border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta"
+            placeholder="Ej: $25.000 - $35.000"
+          />
+        </div>
 
-          {/* Botón */}
-          <div className="pt-2">
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
-            >
-              {loading ? "Publicando..." : "Publicar oferta"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </main>
+        {/* Botón */}
+        <div className="pt-2">
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-jm-magenta text-white py-2 rounded-lg text-sm font-medium shadow-[0_0_0_0_rgba(212,83,126,0)] hover:shadow-[0_0_20px_2px_rgba(212,83,126,0.45)] hover:bg-jm-magenta-light hover:text-jm-magenta-bg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+          >
+            {loading ? "Publicando..." : "Publicar oferta"}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }
