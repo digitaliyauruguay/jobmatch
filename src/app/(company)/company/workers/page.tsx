@@ -205,16 +205,16 @@ export default function CompanyWorkersPage() {
                       </p>
                     )}
                     {worker.cvUrl && (
-                      <a
-                        href={worker.cvUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-jm-cyan-light text-xs hover:underline mt-2 cursor-pointer"
-                      >
-                        <IconFileText size={13} />
-                        Ver CV
-                      </a>
-                    )}
+     <a                 
+    href={`https://docs.google.com/viewer?url=${encodeURIComponent(worker.cvUrl)}&embedded=false`}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="flex items-center gap-1 text-jm-cyan-light text-xs hover:underline mt-2 cursor-pointer"
+  >
+    <IconFileText size={13} />
+    Ver CV
+  </a>
+)}
                   </div>
                 </div>
 

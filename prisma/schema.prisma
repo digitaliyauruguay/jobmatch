@@ -94,6 +94,10 @@ model User {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
+  // Password recovery — código OTP de un solo uso con expiración
+  resetCode       String?
+  resetCodeExpiry DateTime?
+
   workerProfile     WorkerProfile?
   companyProfile    CompanyProfile?
   notifications     Notification[]
@@ -178,6 +182,11 @@ model Job {
   status      JobStatus  @default(ACTIVE)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+
+  // Estadísticas — fecha real de cierre, independiente de updatedAt
+  // que se pisa con cualquier edición. Quién fue contratado se
+  // determina por las Application con status APPROVED en esta oferta.
+  completedAt DateTime?
 
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id])

@@ -1,7 +1,9 @@
 /*
  * Archivo: src/app/api/companies/me/jobs/route.ts
  * Qué hace: Devuelve todas las ofertas publicadas por la empresa
- * autenticada, incluyendo su categoría. Se usa en el dashboard
+ * autenticada, incluyendo categoría, fecha de completado (completedAt)
+ * y observaciones del admin (con el motivo y quién la hizo, para
+ * mostrar detalle en ofertas bloqueadas). Se usa en el dashboard
  * de la empresa para mostrar el listado de ofertas propias.
  * Solo accesible por empresas.
  */
@@ -30,11 +32,17 @@ export async function GET(req: NextRequest) {
     }
 
     const jobs = await prisma.job.findMany({
-  where: {
-    companyId: company.id,
-  },
+      where: {
+        companyId: company.id,
+      },
       include: {
         category: { select: { name: true } },
+        observations: {
+          orderBy: { createdAt: "desc" },
+          include: {
+            admin: { select: { email: true } },
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
     });

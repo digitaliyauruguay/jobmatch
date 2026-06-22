@@ -1,11 +1,11 @@
 /*
  * Archivo: src/app/(company)/company/dashboard/page.tsx
  * Qué hace: Dashboard principal de la empresa con tema oscuro JobMatch.
- * Muestra las ofertas publicadas y para cada una las postulaciones
- * recibidas discriminadas por origen (SELF / INDICATED) y estado.
- * La empresa puede aprobar o rechazar postulaciones propias (SELF) y
- * solo ver el estado de las indicaciones (INDICATED), que el trabajador
- * acepta o rechaza. La navbar ahora la provee el layout compartido.
+ * Para ofertas ACTIVE muestra postulaciones recibidas e indicadas,
+ * con acciones de aprobar/rechazar. Para ofertas COMPLETED muestra
+ * la fecha de cierre y los trabajadores aprobados (puede haber varios).
+ * Para ofertas BLOCKED muestra el motivo, fecha y admin responsable.
+ * La navbar la provee el layout compartido.
  */
 
 "use client";
@@ -14,7 +14,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
-import { IconUsers, IconPlus, IconFileText, IconInfoCircle } from "@tabler/icons-react";
+import { IconUsers, IconPlus, IconFileText, IconInfoCircle, IconCalendar, IconUserCheck, IconAlertTriangle } from "@tabler/icons-react";
 
 type Application = {
   id: string;
@@ -33,6 +33,13 @@ type Application = {
   };
 };
 
+type Observation = {
+  id: string;
+  message: string;
+  createdAt: string;
+  admin: { email: string };
+};
+
 type Job = {
   id: string;
   title: string;
@@ -42,7 +49,9 @@ type Job = {
   department: string;
   salary: string | null;
   createdAt: string;
+  completedAt: string | null;
   category: { name: string };
+  observations: Observation[];
 };
 
 const MODALITY_LABELS: Record<string, string> = {
@@ -66,6 +75,17 @@ const DEPARTMENT_LABELS: Record<string, string> = {
   SAN_JOSE: "San José", FLORES: "Flores", FLORIDA: "Florida",
   DURAZNO: "Durazno", TACUAREMBO: "Tacuarembó", LAVALLEJA: "Lavalleja",
 };
+
+function formatDateTime(dateString: string) {
+  const date = new Date(dateString);
+  return date.toLocaleDateString("es-UY", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export default function CompanyDashboard() {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -100,33 +120,20 @@ export default function CompanyDashboard() {
 
   useEffect(() => {
     if (!selectedJob) return;
+    const job = jobs.find((j) => j.id === selectedJob);
+    if (job?.status !== "ACTIVE") return;
     const appsInterval = setInterval(() => {
       fetchApplications(selectedJob);
     }, 30000);
     return () => clearInterval(appsInterval);
-  }, [selectedJob]);
+  }, [selectedJob, jobs]);
 
-  useEffect(() => {
-    if (selectedJob) {
-      const job = jobs.find((j) => j.id === selectedJob);
-      if (job && job.status !== "ACTIVE") {
-        setSelectedJob(null);
-      }
+  const handleSelectJob = (jobId: string, jobStatus: string) => {
+    setSelectedJob(jobId);
+    if (jobStatus === "ACTIVE") {
+      fetchApplications(jobId);
     }
-  }, [jobs, selectedJob]);
-
-  const [selectError, setSelectError] = useState("");
-
-const handleSelectJob = (jobId: string, jobStatus: string) => {
-  if (jobStatus !== "ACTIVE") {
-    setSelectError("Esta oferta no está activa, por eso no podés ver sus postulaciones.");
-    setTimeout(() => setSelectError(""), 4000);
-    return;
-  }
-  setSelectError("");
-  setSelectedJob(jobId);
-  fetchApplications(jobId);
-};
+  };
 
   const handleDeleteJob = async (jobId: string) => {
     if (!confirm("¿Estás seguro de eliminar esta oferta? Esta acción no se puede deshacer.")) {
@@ -169,6 +176,7 @@ const handleSelectJob = (jobId: string, jobStatus: string) => {
 
   const filteredApplications = applications.filter((a) => a.origin === activeTab);
   const selectedJobData = jobs.find((j) => j.id === selectedJob);
+  const hiredWorkers = applications.filter((a) => a.status === "APPROVED");
 
   const visibleJobs = jobs.filter((j) => jobFilter === "ALL" || j.status === jobFilter);
 
@@ -198,24 +206,24 @@ const handleSelectJob = (jobId: string, jobStatus: string) => {
           <h2 className="text-lg font-medium text-jm-text mb-4">Tus ofertas</h2>
 
           <div className="flex gap-2 mb-4 flex-wrap">
-  {(["ALL", "ACTIVE", "BLOCKED", "COMPLETED", "DELETED"] as const).map((s) => (
-    <button
-      key={s}
-      onClick={() => setJobFilter(s)}
-      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-        jobFilter === s
-          ? "bg-jm-magenta text-white"
-          : "bg-jm-card text-jm-text-secondary border border-jm-border"
-      }`}
-    >
-      {s === "ALL" && "Todas"}
-      {s === "ACTIVE" && "Activas"}
-      {s === "BLOCKED" && "Bloqueadas"}
-      {s === "COMPLETED" && "Completadas"}
-      {s === "DELETED" && "Eliminadas"}
-    </button>
-  ))}
-</div>
+            {(["ALL", "ACTIVE", "BLOCKED", "COMPLETED", "DELETED"] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => setJobFilter(s)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  jobFilter === s
+                    ? "bg-jm-magenta text-white"
+                    : "bg-jm-card text-jm-text-secondary border border-jm-border"
+                }`}
+              >
+                {s === "ALL" && "Todas"}
+                {s === "ACTIVE" && "Activas"}
+                {s === "BLOCKED" && "Bloqueadas"}
+                {s === "COMPLETED" && "Completadas"}
+                {s === "DELETED" && "Eliminadas"}
+              </button>
+            ))}
+          </div>
 
           {loadingJobs ? (
             <p className="text-jm-text-tertiary text-sm">Cargando...</p>
@@ -231,71 +239,125 @@ const handleSelectJob = (jobId: string, jobStatus: string) => {
           ) : (
             <div className="flex flex-col gap-2">
               {visibleJobs.map((job) => (
-                  <div
-                    key={job.id}
-                    className="bg-jm-card rounded-lg p-4 transition-colors"
-                    style={{
-                      border: selectedJob === job.id ? "1px solid #993556" : "1px solid #232229",
-                    }}
+                <div
+                  key={job.id}
+                  className="bg-jm-card rounded-lg p-4 transition-colors"
+                  style={{
+                    border: selectedJob === job.id ? "1px solid #993556" : "1px solid #232229",
+                  }}
+                >
+                  <button
+                    onClick={() => handleSelectJob(job.id, job.status)}
+                    className="text-left w-full cursor-pointer"
                   >
-                    <button
-                      onClick={() => handleSelectJob(job.id, job.status)}
-                      className="text-left w-full cursor-pointer"
-                    >
-                      <div className="flex justify-between items-start">
-                        <p className="font-medium text-sm text-jm-text">{job.title}</p>
-                        {job.status !== "ACTIVE" && (
-                          <Badge variant={job.status === "BLOCKED" ? "red" : job.status === "COMPLETED" ? "cyan" : "gray"}>
-                            {job.status === "BLOCKED" && "Bloqueada"}
-                            {job.status === "COMPLETED" && "Completada"}
-                            {job.status === "DELETED" && "Eliminada"}
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-xs text-jm-text-secondary mt-1">
-                        {job.category.name} · {MODALITY_LABELS[job.modality]}
-                      </p>
-                      <p className="text-xs text-jm-text-tertiary mt-1">
-                        {DEPARTMENT_LABELS[job.department]}
-                      </p>
-                    </button>
-                    {job.status === "ACTIVE" && (
-                      <div className="flex gap-3 mt-3">
-                        <Link href={`/company/jobs/${job.id}/edit`} className="text-xs text-jm-cyan-light hover:underline cursor-pointer">
-                          Editar
-                        </Link>
-                        <button onClick={() => handleCompleteJob(job.id)} className="text-xs text-jm-green-light hover:underline cursor-pointer">
-                          Marcar completada
-                        </button>
-                        <button onClick={() => handleDeleteJob(job.id)} className="text-xs text-jm-red-light hover:underline cursor-pointer">
-                          Eliminar
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                    <div className="flex justify-between items-start">
+                      <p className="font-medium text-sm text-jm-text">{job.title}</p>
+                      {job.status !== "ACTIVE" && (
+                        <Badge variant={job.status === "BLOCKED" ? "red" : job.status === "COMPLETED" ? "cyan" : "gray"}>
+                          {job.status === "BLOCKED" && "Bloqueada"}
+                          {job.status === "COMPLETED" && "Completada"}
+                          {job.status === "DELETED" && "Eliminada"}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-jm-text-secondary mt-1">
+                      {job.category.name} · {MODALITY_LABELS[job.modality]}
+                    </p>
+                    <p className="text-xs text-jm-text-tertiary mt-1">
+                      {DEPARTMENT_LABELS[job.department]}
+                    </p>
+                  </button>
+                  {job.status === "ACTIVE" && (
+                    <div className="flex gap-3 mt-3">
+                      <Link href={`/company/jobs/${job.id}/edit`} className="text-xs text-jm-cyan-light hover:underline cursor-pointer">
+                        Editar
+                      </Link>
+                      <button onClick={() => handleCompleteJob(job.id)} className="text-xs text-jm-green-light hover:underline cursor-pointer">
+                        Marcar completada
+                      </button>
+                      <button onClick={() => handleDeleteJob(job.id)} className="text-xs text-jm-red-light hover:underline cursor-pointer">
+                        Eliminar
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </div>
 
-        {/* Panel derecho — postulaciones */}
+        {/* Panel derecho — detalle */}
         <div className="md:col-span-2">
           {!selectedJob ? (
-  <div
-    className={`rounded-lg p-8 text-center transition-colors duration-300 ${
-      selectError
-        ? "bg-jm-cyan-bg border border-jm-cyan"
-        : "bg-jm-card border border-jm-border"
-    }`}
-  >
-    {selectError && (
-      <IconInfoCircle size={24} className="text-jm-cyan-light mx-auto mb-2" />
-    )}
-    <p className={`text-sm ${selectError ? "text-jm-cyan-light font-medium" : "text-jm-text-tertiary"}`}>
-      {selectError || "Seleccioná una oferta para ver sus postulaciones."}
-    </p>
-  </div>
-) : (
+            <div className="bg-jm-card border border-jm-border rounded-lg p-8 text-center">
+              <p className="text-jm-text-tertiary text-sm">
+                Seleccioná una oferta para ver el detalle.
+              </p>
+            </div>
+          ) : selectedJobData?.status === "COMPLETED" ? (
+            // Detalle de oferta completada
+            <div className="bg-jm-card border border-jm-border rounded-2xl p-6">
+              <h2 className="text-lg font-medium text-jm-text mb-4">{selectedJobData.title}</h2>
+              {selectedJobData.completedAt && (
+                <div className="flex items-center gap-2 text-jm-cyan-light text-sm mb-4">
+                  <IconCalendar size={16} />
+                  Completada el {formatDateTime(selectedJobData.completedAt)}
+                </div>
+              )}
+              <p className="text-sm font-medium text-jm-text-secondary mb-2">
+                Trabajadores contratados
+              </p>
+              {loadingApps ? (
+                <p className="text-jm-text-tertiary text-sm">Cargando...</p>
+              ) : hiredWorkers.length === 0 ? (
+                <p className="text-jm-text-tertiary text-sm">
+                  No quedó registrado ningún trabajador con postulación aprobada en esta oferta.
+                </p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {hiredWorkers.map((app) => (
+                    <div key={app.id} className="flex items-center gap-2 bg-jm-green-bg border border-jm-green rounded-lg px-3 py-2">
+                      <IconUserCheck size={16} className="text-jm-green-light" />
+                      <span className="text-sm text-jm-text">
+                        {app.worker.firstName} {app.worker.lastName}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : selectedJobData?.status === "BLOCKED" ? (
+            // Detalle de oferta bloqueada
+            <div className="bg-jm-card border border-jm-red rounded-2xl p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <IconAlertTriangle size={20} className="text-jm-red-light" />
+                <h2 className="text-lg font-medium text-jm-text">{selectedJobData.title}</h2>
+              </div>
+              {selectedJobData.observations.length === 0 ? (
+                <p className="text-jm-text-tertiary text-sm">
+                  No hay un motivo registrado para este bloqueo.
+                </p>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {selectedJobData.observations.map((obs) => (
+                    <div key={obs.id} className="bg-jm-red-bg border border-jm-red rounded-lg p-4">
+                      <p className="text-sm text-jm-text mb-2">{obs.message}</p>
+                      <p className="text-xs text-jm-text-tertiary">
+                        {formatDateTime(obs.createdAt)} · Bloqueada por el Administrador
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : selectedJobData?.status === "DELETED" ? (
+            <div className="bg-jm-card border border-jm-border rounded-lg p-8 text-center">
+              <p className="text-jm-text-tertiary text-sm">
+                Esta oferta fue eliminada y ya no está disponible.
+              </p>
+            </div>
+          ) : (
+            // Oferta ACTIVE — flujo normal de postulaciones
             <>
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-medium text-jm-text">{selectedJobData?.title}</h2>
@@ -354,16 +416,16 @@ const handleSelectJob = (jobId: string, jobStatus: string) => {
                             ))}
                           </div>
                           {app.worker.cvUrl && (
-                            <a
-                              href={app.worker.cvUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-1 text-jm-cyan-light text-xs hover:underline mt-2 cursor-pointer"
-                            >
-                              <IconFileText size={13} />
-                              Ver CV
-                            </a>
-                          )}
+    <a
+    href={`https://docs.google.com/viewer?url=${encodeURIComponent(app.worker.cvUrl)}&embedded=false`}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="flex items-center gap-1 text-jm-cyan-light text-xs hover:underline mt-2 cursor-pointer"
+  >
+    <IconFileText size={13} />
+    Ver CV
+  </a>
+)}
                         </div>
                         <div className="flex flex-col items-end gap-2">
                           <Badge variant={app.status === "PENDING" ? "cyan" : app.status === "APPROVED" ? "green" : "red"}>

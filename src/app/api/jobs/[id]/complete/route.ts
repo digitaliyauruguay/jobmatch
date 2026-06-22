@@ -1,9 +1,13 @@
 /*
  * Archivo: src/app/api/jobs/[id]/complete/route.ts
  * Qué hace: Permite a la empresa marcar una oferta como completada
- * cuando ya contrató a uno o más trabajadores. Notifica a los
- * postulados en estado PENDING que el puesto ya fue cubierto.
- * Solo la empresa dueña de la oferta puede hacerlo.
+ * cuando ya contrató a uno o más trabajadores. Registra la fecha
+ * real de cierre en completedAt, independiente de updatedAt que se
+ * pisa con cualquier edición. Quién fue contratado se determina
+ * consultando las Application con status APPROVED de esta oferta
+ * (puede haber más de una si se contrató a varios trabajadores).
+ * Notifica a los postulados en estado PENDING que el puesto ya
+ * fue cubierto. Solo la empresa dueña de la oferta puede hacerlo.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -44,7 +48,10 @@ export async function PATCH(
 
     const updated = await prisma.job.update({
       where: { id },
-      data: { status: "COMPLETED" },
+      data: {
+        status: "COMPLETED",
+        completedAt: new Date(),
+      },
     });
 
     // Notificar a postulados pendientes que el puesto ya fue cubierto

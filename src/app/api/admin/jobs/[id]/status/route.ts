@@ -2,9 +2,10 @@
  * Archivo: src/app/api/admin/jobs/[id]/status/route.ts
  * Qué hace: Permite al administrador cambiar el estado de una oferta
  * de trabajo. PATCH - actualiza el estado a ACTIVE, BLOCKED o DELETED.
- * Notifica a la empresa con notificación interna y email cuando
- * su oferta es bloqueada, eliminada o reactivada.
- * Solo accesible por el administrador.
+ * Cuando bloquea, crea un registro en Observation con el motivo para
+ * que la empresa pueda verlo en el detalle de la oferta. Notifica a
+ * la empresa con notificación interna y email. Solo accesible por
+ * el administrador.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -41,6 +42,18 @@ export async function PATCH(
         },
       },
     });
+
+    // Registrar la observación con el motivo cuando se bloquea o elimina
+    if ((status === "BLOCKED" || status === "DELETED") && message) {
+      await prisma.observation.create({
+        data: {
+          message,
+          targetType: "JOB",
+          targetJobId: job.id,
+          adminId: token.id as string,
+        },
+      });
+    }
 
     // Notificación interna
     const defaultMessages: Record<string, string> = {
