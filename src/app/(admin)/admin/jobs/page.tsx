@@ -4,7 +4,9 @@
  * de trabajo con tema oscuro JobMatch. Muestra todas las ofertas
  * filtradas por estado. El admin puede bloquear, reactivar o eliminar
  * ofertas, y al bloquearlas puede escribir un motivo que le llega a
- * la empresa como notificación. La navbar la provee el layout compartido.
+ * la empresa como notificación. En mobile el listado se muestra como
+ * tarjetas apiladas en vez de tabla, para evitar scroll horizontal.
+ * La navbar la provee el layout compartido.
  */
 
 "use client";
@@ -63,6 +65,69 @@ export default function AdminJobsPage() {
     HYBRID: "Híbrido",
   };
 
+  // Bloque de acciones, compartido entre la vista de tabla y la de cards
+  const renderActions = (job: Job) => (
+    <div className="flex gap-2 flex-wrap">
+      {filter === "ACTIVE" && (
+        <>
+          <button
+            onClick={() => setObservationJobId(job.id)}
+            className="px-3 py-1 bg-jm-cyan text-white rounded-lg text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer"
+          >
+            Bloquear
+          </button>
+          <button
+            onClick={() => updateStatus(job.id, "DELETED")}
+            className="px-3 py-1 bg-jm-red text-white rounded-lg text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer"
+          >
+            Eliminar
+          </button>
+        </>
+      )}
+      {filter === "BLOCKED" && (
+        <>
+          <button
+            onClick={() => updateStatus(job.id, "ACTIVE")}
+            className="px-3 py-1 bg-jm-green text-white rounded-lg text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer"
+          >
+            Reactivar
+          </button>
+          <button
+            onClick={() => updateStatus(job.id, "DELETED")}
+            className="px-3 py-1 bg-jm-red text-white rounded-lg text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer"
+          >
+            Eliminar
+          </button>
+        </>
+      )}
+    </div>
+  );
+
+  // Input de motivo inline, compartido entre tabla y cards
+  const renderObservationInput = (job: Job) => (
+    <div className="flex gap-2 items-center flex-wrap p-2 bg-jm-cyan-bg border-2 border-jm-cyan rounded-lg mt-2">
+      <input
+        type="text"
+        value={observationMessage}
+        onChange={(e) => setObservationMessage(e.target.value)}
+        placeholder="Motivo del bloqueo (opcional)"
+        className="flex-1 min-w-[160px] bg-jm-card border border-jm-border rounded-lg px-3 py-1.5 text-sm text-jm-text focus:outline-none focus:border-jm-cyan"
+      />
+      <button
+        onClick={() => updateStatus(job.id, "BLOCKED", observationMessage)}
+        className="px-3 py-1.5 bg-jm-cyan text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity cursor-pointer"
+      >
+        Confirmar bloqueo
+      </button>
+      <button
+        onClick={() => setObservationJobId(null)}
+        className="px-3 py-1.5 bg-jm-card-hover text-jm-text-secondary rounded-lg text-sm hover:text-jm-text transition-colors cursor-pointer"
+      >
+        Cancelar
+      </button>
+    </div>
+  );
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <Link
@@ -94,100 +159,75 @@ export default function AdminJobsPage() {
         ))}
       </div>
 
-      {/* Tabla */}
       {loading ? (
         <p className="text-jm-text-tertiary text-sm">Cargando...</p>
       ) : jobs.length === 0 ? (
         <p className="text-jm-text-tertiary text-sm">No hay ofertas en este estado.</p>
       ) : (
-        <div className="bg-jm-card border border-jm-border rounded-2xl overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-jm-card-hover border-b border-jm-border">
-              <tr>
-                <th className="text-left px-4 py-3 text-jm-text-secondary font-medium">Título</th>
-                <th className="text-left px-4 py-3 text-jm-text-secondary font-medium">Empresa</th>
-                <th className="text-left px-4 py-3 text-jm-text-secondary font-medium">Categoría</th>
-                <th className="text-left px-4 py-3 text-jm-text-secondary font-medium">Modalidad</th>
-                <th className="text-left px-4 py-3 text-jm-text-secondary font-medium">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-jm-border">
-              {jobs.map((job) => (
-                <>
-                  <tr key={job.id} className="hover:bg-jm-card-hover transition-colors">
-                    <td className="px-4 py-3 font-medium text-jm-text">{job.title}</td>
-                    <td className="px-4 py-3 text-jm-text-secondary">{job.company.name}</td>
-                    <td className="px-4 py-3 text-jm-text-secondary">{job.category.name}</td>
-                    <td className="px-4 py-3 text-jm-text-secondary">{modalityLabel[job.modality]}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2">
-                        {filter === "ACTIVE" && (
-                          <>
-                            <button
-                              onClick={() => setObservationJobId(job.id)}
-                              className="px-3 py-1 bg-jm-cyan text-white rounded-lg text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer"
-                            >
-                              Bloquear
-                            </button>
-                            <button
-                              onClick={() => updateStatus(job.id, "DELETED")}
-                              className="px-3 py-1 bg-jm-red text-white rounded-lg text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer"
-                            >
-                              Eliminar
-                            </button>
-                          </>
-                        )}
-                        {filter === "BLOCKED" && (
-                          <>
-                            <button
-                              onClick={() => updateStatus(job.id, "ACTIVE")}
-                              className="px-3 py-1 bg-jm-green text-white rounded-lg text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer"
-                            >
-                              Reactivar
-                            </button>
-                            <button
-                              onClick={() => updateStatus(job.id, "DELETED")}
-                              className="px-3 py-1 bg-jm-red text-white rounded-lg text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer"
-                            >
-                              Eliminar
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                  {observationJobId === job.id && (
-  <tr key={`obs-${job.id}`} className="bg-jm-cyan-bg">
-    <td colSpan={5} className="px-4 py-3 border-2 border-jm-cyan rounded-lg">
-                        <div className="flex gap-2 items-center p-2">
-                          <input
-                            type="text"
-                            value={observationMessage}
-                            onChange={(e) => setObservationMessage(e.target.value)}
-                            placeholder="Motivo del bloqueo (opcional)"
-                            className="flex-1 bg-jm-card border border-jm-border rounded-lg px-3 py-1.5 text-sm text-jm-text focus:outline-none focus:border-jm-cyan"
-                          />
-                          <button
-                            onClick={() => updateStatus(job.id, "BLOCKED", observationMessage)}
-                            className="px-3 py-1.5 bg-jm-cyan text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity cursor-pointer"
-                          >
-                            Confirmar bloqueo
-                          </button>
-                          <button
-                            onClick={() => setObservationJobId(null)}
-                            className="px-3 py-1.5 bg-jm-card-hover text-jm-text-secondary rounded-lg text-sm hover:text-jm-text transition-colors cursor-pointer"
-                          >
-                            Cancelar
-                          </button>
-                        </div>
-                      </td>
+        <>
+          {/* Vista tabla — desktop/tablet */}
+          <div className="hidden md:block bg-jm-card border border-jm-border rounded-2xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-jm-card-hover border-b border-jm-border">
+                <tr>
+                  <th className="text-left px-4 py-3 text-jm-text-secondary font-medium">Título</th>
+                  <th className="text-left px-4 py-3 text-jm-text-secondary font-medium">Empresa</th>
+                  <th className="text-left px-4 py-3 text-jm-text-secondary font-medium">Categoría</th>
+                  <th className="text-left px-4 py-3 text-jm-text-secondary font-medium">Modalidad</th>
+                  <th className="text-left px-4 py-3 text-jm-text-secondary font-medium">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-jm-border">
+                {jobs.map((job) => (
+                  <>
+                    <tr key={job.id} className="hover:bg-jm-card-hover transition-colors">
+                      <td className="px-4 py-3 font-medium text-jm-text">{job.title}</td>
+                      <td className="px-4 py-3 text-jm-text-secondary">{job.company.name}</td>
+                      <td className="px-4 py-3 text-jm-text-secondary">{job.category.name}</td>
+                      <td className="px-4 py-3 text-jm-text-secondary">{modalityLabel[job.modality]}</td>
+                      <td className="px-4 py-3">{renderActions(job)}</td>
                     </tr>
-                  )}
-                </>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    {observationJobId === job.id && (
+                      <tr key={`obs-${job.id}`}>
+                        <td colSpan={5} className="px-4 py-3">
+                          {renderObservationInput(job)}
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Vista cards — mobile */}
+          <div className="md:hidden flex flex-col gap-3">
+            {jobs.map((job) => (
+              <div
+                key={job.id}
+                className="bg-jm-card border border-jm-border rounded-2xl p-4"
+              >
+                <h3 className="font-medium text-jm-text mb-2">{job.title}</h3>
+                <div className="text-sm text-jm-text-secondary space-y-1 mb-3">
+                  <p>
+                    <span className="text-jm-text-tertiary">Empresa: </span>
+                    {job.company.name}
+                  </p>
+                  <p>
+                    <span className="text-jm-text-tertiary">Categoría: </span>
+                    {job.category.name}
+                  </p>
+                  <p>
+                    <span className="text-jm-text-tertiary">Modalidad: </span>
+                    {modalityLabel[job.modality]}
+                  </p>
+                </div>
+                {renderActions(job)}
+                {observationJobId === job.id && renderObservationInput(job)}
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

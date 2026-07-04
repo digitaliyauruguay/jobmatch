@@ -182,18 +182,18 @@ export default function CompanyDashboard() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Acciones rápidas */}
-      <div className="flex justify-end gap-3 mb-6">
+      {/* Acciones rápidas — apiladas y full-width en mobile, en fila desde sm */}
+      <div className="flex flex-col sm:flex-row sm:justify-end gap-3 mb-6">
         <Link
           href="/company/workers"
-          className="flex items-center gap-1.5 border border-jm-border-soft text-jm-text-secondary px-4 py-2 rounded-lg text-sm font-medium hover:border-jm-gray transition-colors cursor-pointer"
+          className="flex items-center justify-center gap-1.5 border border-jm-border-soft text-jm-text-secondary px-4 py-2 rounded-lg text-sm font-medium hover:border-jm-gray transition-colors cursor-pointer"
         >
           <IconUsers size={16} />
           Buscar trabajadores
         </Link>
         <Link
           href="/company/jobs/new"
-          className="flex items-center gap-1.5 bg-jm-magenta text-white px-4 py-2 rounded-lg text-sm font-medium shadow-[0_0_0_0_rgba(212,83,126,0)] hover:shadow-[0_0_20px_2px_rgba(212,83,126,0.45)] hover:bg-jm-magenta-light hover:text-jm-magenta-bg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 cursor-pointer"
+          className="flex items-center justify-center gap-1.5 bg-jm-magenta text-white px-4 py-2 rounded-lg text-sm font-medium shadow-[0_0_0_0_rgba(212,83,126,0)] hover:shadow-[0_0_20px_2px_rgba(212,83,126,0.45)] hover:bg-jm-magenta-light hover:text-jm-magenta-bg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 cursor-pointer"
         >
           <IconPlus size={16} />
           Nueva oferta
@@ -250,7 +250,7 @@ export default function CompanyDashboard() {
                     onClick={() => handleSelectJob(job.id, job.status)}
                     className="text-left w-full cursor-pointer"
                   >
-                    <div className="flex justify-between items-start">
+                    <div className="flex justify-between items-start gap-2">
                       <p className="font-medium text-sm text-jm-text">{job.title}</p>
                       {job.status !== "ACTIVE" && (
                         <Badge variant={job.status === "BLOCKED" ? "red" : job.status === "COMPLETED" ? "cyan" : "gray"}>
@@ -268,7 +268,7 @@ export default function CompanyDashboard() {
                     </p>
                   </button>
                   {job.status === "ACTIVE" && (
-                    <div className="flex gap-3 mt-3">
+                    <div className="flex gap-3 mt-3 flex-wrap">
                       <Link href={`/company/jobs/${job.id}/edit`} className="text-xs text-jm-cyan-light hover:underline cursor-pointer">
                         Editar
                       </Link>
@@ -363,7 +363,7 @@ export default function CompanyDashboard() {
                 <h2 className="text-lg font-medium text-jm-text">{selectedJobData?.title}</h2>
               </div>
 
-              <div className="flex gap-2 mb-4">
+              <div className="flex gap-2 mb-4 flex-wrap">
                 <button
                   onClick={() => setActiveTab("SELF")}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
@@ -400,7 +400,7 @@ export default function CompanyDashboard() {
                 <div className="flex flex-col gap-3">
                   {filteredApplications.map((app) => (
                     <div key={app.id} className="bg-jm-card border border-jm-border rounded-lg p-4">
-                      <div className="flex justify-between items-start">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
                         <div>
                           <p className="font-medium text-jm-text">
                             {app.worker.firstName} {app.worker.lastName}
@@ -427,7 +427,7 @@ export default function CompanyDashboard() {
   </a>
 )}
                         </div>
-                        <div className="flex flex-col items-end gap-2">
+                        <div className="flex flex-row sm:flex-col items-start sm:items-end gap-2 flex-wrap">
                           <Badge variant={app.status === "PENDING" ? "cyan" : app.status === "APPROVED" ? "green" : "red"}>
                             {app.status === "PENDING" && "Pendiente"}
                             {app.status === "APPROVED" && (activeTab === "INDICATED" ? "Aceptada por el trabajador" : "Aprobado")}

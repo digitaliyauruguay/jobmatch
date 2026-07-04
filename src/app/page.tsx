@@ -1,16 +1,28 @@
 /*
  * Archivo: src/app/page.tsx
  * Qué hace: Página de inicio pública de JobMatch Uruguay con tema
- * oscuro. Navbar flotante con logo animado. Hero dividido por
+ * oscuro. Navbar flotante con logo animado; en mobile colapsa a un
+ * menú hamburguesa para no apretar los links. Hero dividido por
  * audiencia (trabajador/empresa) con CTAs diferenciados, seguido
- * de una sección "Cómo funciona" en 3 pasos. Página estática sin
- * estado, solo presentación visual y navegación.
+ * de una sección "Cómo funciona" en 3 pasos.
  */
 
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
-import { IconBriefcase, IconUserCheck, IconBuildingStore, IconArrowRight } from "@tabler/icons-react";
+import {
+  IconBriefcase,
+  IconUserCheck,
+  IconBuildingStore,
+  IconArrowRight,
+  IconMenu2,
+  IconX,
+} from "@tabler/icons-react";
 
 export default function HomePage() {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
     <main className="min-h-screen bg-jm-black">
       {/* Nav flotante */}
@@ -26,7 +38,9 @@ export default function HomePage() {
                 JobMatch
               </span>
             </Link>
-            <div className="flex items-center gap-5">
+
+            {/* Links — visibles desde sm, ocultos en mobile */}
+            <div className="hidden sm:flex items-center gap-3">
               <Link
                 href="/jobs"
                 className="text-sm text-jm-text-secondary hover:text-jm-text transition-colors cursor-pointer"
@@ -41,7 +55,7 @@ export default function HomePage() {
               </Link>
               <Link
                 href="/login"
-                className="text-sm text-jm-text-secondary hover:text-jm-text transition-colors cursor-pointer"
+                className="bg-jm-cyan text-white px-4 py-2 rounded-lg text-sm font-medium shadow-[0_0_0_0_rgba(45,163,173,0)] hover:shadow-[0_0_20px_2px_rgba(45,163,173,0.45)] hover:bg-jm-cyan-light hover:text-jm-cyan-bg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 cursor-pointer"
               >
                 Ingresar
               </Link>
@@ -52,7 +66,50 @@ export default function HomePage() {
                 Registrarse
               </Link>
             </div>
+
+            {/* Botón hamburguesa — solo en mobile */}
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="sm:hidden text-jm-text-secondary hover:text-jm-text transition-colors cursor-pointer p-1"
+              aria-label="Abrir menú"
+            >
+              {menuOpen ? <IconX size={22} /> : <IconMenu2 size={22} />}
+            </button>
           </div>
+
+          {/* Panel desplegable — solo en mobile */}
+          {menuOpen && (
+            <div className="sm:hidden flex flex-col gap-1 px-5 pb-4 border-t border-jm-border pt-3">
+              <Link
+                href="/jobs"
+                onClick={() => setMenuOpen(false)}
+                className="text-sm text-jm-text-secondary hover:text-jm-text transition-colors cursor-pointer py-2"
+              >
+                Ofertas
+              </Link>
+              <Link
+                href="/workers"
+                onClick={() => setMenuOpen(false)}
+                className="text-sm text-jm-text-secondary hover:text-jm-text transition-colors cursor-pointer py-2"
+              >
+                Trabajadores
+              </Link>
+              <Link
+                href="/login"
+                onClick={() => setMenuOpen(false)}
+                className="bg-jm-cyan text-white px-4 py-2.5 rounded-lg text-sm font-medium text-center mt-1 cursor-pointer"
+              >
+                Ingresar
+              </Link>
+              <Link
+                href="/register"
+                onClick={() => setMenuOpen(false)}
+                className="bg-jm-magenta text-white px-4 py-2.5 rounded-lg text-sm font-medium text-center mt-1 cursor-pointer"
+              >
+                Registrarse
+              </Link>
+            </div>
+          )}
         </nav>
       </div>
 
@@ -68,9 +125,9 @@ export default function HomePage() {
         <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-2xl mx-auto">
           {/* Card trabajador */}
           <Link
-  href="/register?role=worker"
-  className="flex-1 bg-jm-card border border-jm-border rounded-2xl p-6 text-left hover:border-jm-cyan transition-colors cursor-pointer group"
->
+            href="/register?role=worker"
+            className="flex-1 bg-jm-card border border-jm-border rounded-2xl p-6 text-left hover:border-jm-cyan transition-colors cursor-pointer group"
+          >
             <div className="flex items-center gap-2 mb-3">
               <IconUserCheck size={18} className="text-jm-cyan-light" />
               <p className="text-xs font-semibold text-jm-cyan-light tracking-wide">SOY TRABAJADOR</p>
@@ -86,9 +143,9 @@ export default function HomePage() {
 
           {/* Card empresa */}
           <Link
-  href="/register?role=company"
-  className="flex-1 bg-jm-card border border-jm-border rounded-2xl p-6 text-left hover:border-jm-magenta transition-colors cursor-pointer group"
->
+            href="/register?role=company"
+            className="flex-1 bg-jm-card border border-jm-border rounded-2xl p-6 text-left hover:border-jm-magenta transition-colors cursor-pointer group"
+          >
             <div className="flex items-center gap-2 mb-3">
               <IconBuildingStore size={18} className="text-jm-magenta-light" />
               <p className="text-xs font-semibold text-jm-magenta-light tracking-wide">SOY EMPRESA</p>

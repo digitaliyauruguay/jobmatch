@@ -74,13 +74,13 @@ export default function PublicWorkersPage() {
 
   return (
     <main className="max-w-7xl mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 mb-6">
         <h1 className="text-2xl font-medium text-jm-text">Trabajadores disponibles</h1>
         <p className="text-sm text-jm-text-tertiary">{workers.length} trabajadores</p>
       </div>
 
-      {/* Filtros */}
-      <div className="grid grid-cols-2 gap-3 mb-6 max-w-md">
+      {/* Filtros — 1 columna en mobile, 2 desde sm para no apretar los selects */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 max-w-md">
         <select
           value={filters.categoryId}
           onChange={(e) => setFilters({ ...filters, categoryId: e.target.value })}

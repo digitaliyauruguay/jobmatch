@@ -3,7 +3,9 @@
  * Qué hace: Devuelve el perfil completo de una empresa específica.
  * Para usuarios autenticados devuelve todos los datos incluyendo
  * contacto. Para usuarios no autenticados devuelve datos limitados.
- * Solo muestra empresas con estado ACTIVE.
+ * Solo muestra empresas con estado ACTIVE, salvo que quien consulta
+ * sea ADMIN, que puede ver el perfil en cualquier estado
+ * (PENDING/INACTIVE/BLOCKED) para revisión y moderación.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -17,6 +19,7 @@ export async function GET(
   try {
     const { id } = await params;
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    const isAdmin = token?.role === "ADMIN";
 
     const company = await prisma.companyProfile.findUnique({
       where: { id },
@@ -30,7 +33,7 @@ export async function GET(
       },
     });
 
-    if (!company || company.user.status !== "ACTIVE") {
+    if (!company || (!isAdmin && company.user.status !== "ACTIVE")) {
       return NextResponse.json(
         { error: "Empresa no encontrada" },
         { status: 404 }

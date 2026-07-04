@@ -3,7 +3,9 @@
  * Qué hace: Devuelve el perfil completo de un trabajador específico.
  * Para empresas y admins devuelve todos los datos incluyendo teléfono
  * y CV. Para usuarios no autenticados devuelve datos limitados.
- * Solo muestra trabajadores con estado ACTIVE.
+ * Solo muestra trabajadores con estado ACTIVE, salvo que quien
+ * consulta sea ADMIN, que puede ver el perfil en cualquier estado
+ * (PENDING/INACTIVE/BLOCKED) para revisión y moderación.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -17,6 +19,7 @@ export async function GET(
   try {
     const { id } = await params;
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    const isAdmin = token?.role === "ADMIN";
 
     const worker = await prisma.workerProfile.findUnique({
       where: { id },
@@ -30,7 +33,7 @@ export async function GET(
       },
     });
 
-    if (!worker || worker.user.status !== "ACTIVE") {
+    if (!worker || (!isAdmin && worker.user.status !== "ACTIVE")) {
       return NextResponse.json(
         { error: "Trabajador no encontrado" },
         { status: 404 }

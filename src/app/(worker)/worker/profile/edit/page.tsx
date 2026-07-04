@@ -157,7 +157,8 @@ export default function EditWorkerProfilePage() {
           onUpload={(url) => setForm({ ...form, photo: url })}
         />
 
-        <div className="grid grid-cols-2 gap-4">
+        {/* 1 columna en mobile, 2 desde sm para no apretar Nombre/Apellido */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="flex flex-col gap-1">
             <label className="text-sm text-jm-text-secondary">Nombre</label>
             <input

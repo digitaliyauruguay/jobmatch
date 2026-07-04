@@ -145,8 +145,8 @@ export default function CompanyWorkersPage() {
           </div>
         )}
 
-        {/* Filtros */}
-        <div className="grid grid-cols-2 gap-3 mb-6 max-w-md">
+        {/* Filtros — 1 columna en mobile, 2 desde sm para no apretar los selects */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 max-w-md">
           <select
             value={filters.categoryId}
             onChange={(e) => setFilters({ ...filters, categoryId: e.target.value })}

@@ -3,7 +3,8 @@
  * Qué hace: Dashboard del administrador con tema oscuro JobMatch.
  * Es la página principal a la que llega el admin después de loguear.
  * Desde aquí puede navegar a aprobar usuarios, gestionar ofertas,
- * y moderar la plataforma. La navbar la provee el layout compartido.
+ * moderar la plataforma y ver estadísticas. La navbar la provee el
+ * layout compartido.
  */
 
 "use client";
@@ -14,6 +15,7 @@ import {
   IconBriefcase,
   IconClipboardList,
   IconMessageExclamation,
+  IconChartBar,
 } from "@tabler/icons-react";
 
 export default function AdminDashboard() {
@@ -70,7 +72,20 @@ export default function AdminDashboard() {
             <h2 className="text-lg font-medium text-jm-text">Observaciones</h2>
           </div>
           <p className="text-jm-text-secondary text-sm">
-            Hacer observaciones a perfiles u ofertas
+            Ver el historial de bloqueos y motivos registrados
+          </p>
+        </Link>
+
+        <Link
+          href="/admin/stats"
+          className="bg-jm-card border border-jm-border p-6 rounded-2xl hover:border-jm-magenta transition-colors cursor-pointer md:col-span-2"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <IconChartBar size={20} className="text-jm-cyan-light" />
+            <h2 className="text-lg font-medium text-jm-text">Estadísticas</h2>
+          </div>
+          <p className="text-jm-text-secondary text-sm">
+            Adopción, efectividad, demanda y moderación de la plataforma
           </p>
         </Link>
       </div>

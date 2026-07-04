@@ -88,13 +88,13 @@ export default function PublicJobsPage() {
 
   return (
     <main className="max-w-7xl mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 mb-6">
         <h1 className="text-2xl font-medium text-jm-text">Ofertas de trabajo</h1>
         <p className="text-sm text-jm-text-tertiary">{jobs.length} ofertas disponibles</p>
       </div>
 
-      {/* Filtros */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      {/* Filtros — 1 columna en mobile, 2 desde sm, 4 desde md */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <select
           value={filters.categoryId}
           onChange={(e) => setFilters({ ...filters, categoryId: e.target.value })}

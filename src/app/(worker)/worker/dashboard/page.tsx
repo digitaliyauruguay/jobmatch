@@ -226,7 +226,8 @@ export default function WorkerDashboard() {
       <div className="py-2 pb-8">
         {activeSection === "jobs" && (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            {/* Filtros — 1 columna en mobile, 2 desde sm, 4 desde md */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-6">
               <select
                 value={filters.categoryId}
                 onChange={(e) => setFilters({ ...filters, categoryId: e.target.value })}
@@ -324,9 +325,9 @@ export default function WorkerDashboard() {
         )}
 
         {activeSection === "applications" && profile?.cvUrl && (
-          <div className="bg-jm-card border border-jm-border rounded-2xl p-5 mb-6 flex items-center justify-between">
+          <div className="bg-jm-card border border-jm-border rounded-2xl p-5 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-jm-cyan-bg flex items-center justify-center">
+              <div className="w-11 h-11 rounded-xl bg-jm-cyan-bg flex items-center justify-center flex-shrink-0">
                 <IconFileText size={22} className="text-jm-cyan-light" />
               </div>
               <div>
@@ -359,7 +360,7 @@ export default function WorkerDashboard() {
 
         {activeSection === "applications" && (
           <>
-            <div className="flex gap-2 mb-6">
+            <div className="flex gap-2 mb-6 flex-wrap">
               <button
                 onClick={() => setAppTab("SELF")}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
@@ -397,7 +398,7 @@ export default function WorkerDashboard() {
                     key={app.id}
                     className="bg-jm-card border border-jm-border rounded-lg p-4"
                   >
-                    <div className="flex justify-between items-start">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
                       <div>
                         <p className="font-medium text-jm-text">{app.job.title}</p>
                         <p className="text-sm text-jm-text-secondary mt-0.5">

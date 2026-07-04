@@ -145,3 +145,21 @@ export const emailJobBlocked = (
     </div>
   `,
 });
+
+export const emailPasswordReset = (code: string) => ({
+  subject: "Código para recuperar tu contraseña — JobMatch Uruguay",
+  html: `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #1d4ed8;">Recuperá tu contraseña</h2>
+      <p>Recibimos una solicitud para restablecer tu contraseña en JobMatch Uruguay.</p>
+      <p>Usá este código para continuar:</p>
+      <div style="background: #f3f4f6; padding: 16px 24px; border-radius: 8px; text-align: center; margin: 16px 0;">
+        <span style="font-size: 28px; font-weight: bold; letter-spacing: 4px; color: #1d4ed8;">${code}</span>
+      </div>
+      <p>Este código vence en 30 minutos.</p>
+      <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">
+        Si no solicitaste este cambio, podés ignorar este email de forma segura.
+      </p>
+    </div>
+  `,
+});

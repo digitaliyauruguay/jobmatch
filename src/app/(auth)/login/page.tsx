@@ -3,49 +3,81 @@
  * Qué hace: Página de login con tema oscuro JobMatch. Muestra un
  * formulario con email y contraseña. Al enviar, usa NextAuth para
  * autenticar al usuario y lo redirige a su dashboard según su rol.
- * Si el usuario está pendiente de aprobación o bloqueado, muestra
- * un mensaje de error correspondiente.
+ * Validación propia sin depender del navegador (type="text" en email
+ * para evitar tooltips nativos). Mensajes de error y éxito con ícono
+ * que se auto-ocultan después de 4 segundos.
  */
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { IconBriefcase } from "@tabler/icons-react";
+import { IconBriefcase, IconArrowLeft, IconX, IconCheck } from "@tabler/icons-react";
+
+type Message = { type: "error" | "success"; text: string } | null;
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{3,}$/;
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [message, setMessage] = useState<Message>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!message) return;
+    const timer = setTimeout(() => setMessage(null), 4000);
+    return () => clearTimeout(timer);
+  }, [message]);
+
+  const showError = (text: string) => setMessage({ type: "error", text });
+  const showSuccess = (text: string) => setMessage({ type: "success", text });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const trimmedEmail = email.trim();
+
+    if (!trimmedEmail) {
+      showError("Ingresá tu email para continuar");
+      return;
+    }
+    if (!EMAIL_REGEX.test(trimmedEmail)) {
+      showError("El email ingresado no tiene un formato válido");
+      return;
+    }
+    if (!password || password.length < 8) {
+  showError("La contraseña debe tener al menos 8 caracteres");
+  return;
+}
+
     setLoading(true);
-    setError("");
+    setMessage(null);
 
     const result = await signIn("credentials", {
-      email,
+      email: trimmedEmail,
       password,
       redirect: false,
     });
 
     if (result?.error) {
       if (result.error.includes("PENDING")) {
-        setError("Tu cuenta está pendiente de aprobación. Te avisaremos cuando esté lista.");
+        showError("Tu cuenta está pendiente de aprobación. Te avisaremos por email cuando esté lista");
       } else if (result.error.includes("BLOCKED")) {
-        setError("Tu cuenta está bloqueada. Contactá al administrador.");
+        showError("Tu cuenta está bloqueada. Contactá al administrador para más información");
       } else if (result.error.includes("INACTIVE")) {
-        setError("Tu cuenta está inactiva. Contactá al administrador.");
+        showError("Tu cuenta está inactiva. Contactá al administrador para reactivarla");
       } else {
-        setError("Email o contraseña incorrectos.");
+        showError("El email o la contraseña son incorrectos");
       }
       setLoading(false);
       return;
     }
+
+    showSuccess("Ingreso exitoso. Redirigiendo...");
 
     const session = await fetch("/api/auth/session").then((r) => r.json());
 
@@ -61,7 +93,7 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen flex items-center justify-center bg-jm-black px-4">
       <div className="w-full max-w-md">
-        <Link href="/" className="flex items-center justify-center gap-2 mb-8 cursor-pointer group">
+        <Link href="/" className="flex items-center justify-center gap-2 mb-4 cursor-pointer group">
           <IconBriefcase
             size={26}
             className="text-jm-magenta-light transition-transform duration-200 group-hover:scale-110 group-hover:rotate-[-6deg]"
@@ -71,10 +103,18 @@ export default function LoginPage() {
           </span>
         </Link>
 
+        <div className="flex justify-center mb-4">
+          <Link
+            href="/"
+            className="flex items-center gap-1 text-sm text-jm-magenta-light hover:text-jm-text transition-colors cursor-pointer"
+          >
+            <IconArrowLeft size={14} />
+            Volver al inicio
+          </Link>
+        </div>
+
         <div className="bg-jm-card border border-jm-border rounded-2xl p-8">
-          <h1 className="text-2xl font-medium text-jm-text mb-2">
-            Iniciar sesión
-          </h1>
+          <h1 className="text-2xl font-medium text-jm-text mb-2">Iniciar sesión</h1>
           <p className="text-jm-text-secondary text-sm mb-6">
             Ingresá con tu cuenta para continuar
           </p>
@@ -82,13 +122,15 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1">
               <label className="text-sm text-jm-text-secondary">Email</label>
+              {/* type="text" para evitar el tooltip de validación nativo del navegador */}
               <input
-                type="email"
+                type="text"
+                inputMode="email"
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="bg-jm-card-hover border border-jm-border rounded-lg px-4 py-2.5 text-sm text-jm-text focus:outline-none focus:border-jm-magenta"
                 placeholder="tu@email.com"
-                required
               />
             </div>
 
@@ -96,15 +138,31 @@ export default function LoginPage() {
               <label className="text-sm text-jm-text-secondary">Contraseña</label>
               <input
                 type="password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="bg-jm-card-hover border border-jm-border rounded-lg px-4 py-2.5 text-sm text-jm-text focus:outline-none focus:border-jm-magenta"
                 placeholder="••••••••"
-                required
               />
             </div>
 
-            {error && <p className="text-jm-red-light text-sm">{error}</p>}
+            {/* Mensaje de error o éxito — aparece arriba del botón, desaparece en 4s */}
+            {message && (
+              <div
+                className={`flex items-start gap-2 px-3 py-2.5 rounded-lg text-sm ${
+                  message.type === "error"
+                    ? "bg-jm-red-bg border border-jm-red text-jm-red-light"
+                    : "bg-jm-green-bg border border-jm-green text-jm-green-light"
+                }`}
+              >
+                {message.type === "error" ? (
+                  <IconX size={16} className="mt-0.5 flex-shrink-0" />
+                ) : (
+                  <IconCheck size={16} className="mt-0.5 flex-shrink-0" />
+                )}
+                <span>{message.text}</span>
+              </div>
+            )}
 
             <button
               type="submit"
@@ -113,6 +171,13 @@ export default function LoginPage() {
             >
               {loading ? "Ingresando..." : "Ingresar"}
             </button>
+
+            <Link
+              href="/forgot-password"
+              className="text-sm text-jm-cyan-light hover:underline cursor-pointer text-center"
+            >
+              ¿Olvidaste tu contraseña?
+            </Link>
           </form>
 
           <p className="text-sm text-jm-text-tertiary mt-6 text-center">
