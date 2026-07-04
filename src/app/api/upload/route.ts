@@ -2,6 +2,9 @@
  * Archivo: src/app/api/upload/route.ts
  * Qué hace: Endpoint para subir archivos a Cloudinary.
  * Acepta imágenes (fotos de perfil, logos) y documentos (CVs en PDF).
+ * El límite de imágenes es 10MB como safety net del servidor — en la
+ * práctica el cliente ya comprime antes de enviar via FileUpload.tsx,
+ * así que lo que llega aquí siempre es pequeño.
  * Organiza los archivos en carpetas según el tipo.
  * Solo accesible por usuarios autenticados.
  */
@@ -11,7 +14,6 @@ import { uploadFile } from "@/lib/cloudinary";
 
 export async function POST(req: NextRequest) {
   try {
-
     const formData = await req.formData();
     const file = formData.get("file") as File;
     const type = formData.get("type") as string;
@@ -30,7 +32,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validaciones por tipo
     if (type === "cv") {
       if (file.type !== "application/pdf") {
         return NextResponse.json(
@@ -53,20 +54,19 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
-      if (file.size > 2 * 1024 * 1024) {
+      // 10MB — el cliente ya comprimió, esto es solo safety net
+      if (file.size > 10 * 1024 * 1024) {
         return NextResponse.json(
-          { error: "La imagen no puede superar los 2MB" },
+          { error: "La imagen no puede superar los 10MB" },
           { status: 400 }
         );
       }
     }
 
-    // Convertir archivo a base64
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
     const base64 = `data:${file.type};base64,${buffer.toString("base64")}`;
 
-    // Subir a Cloudinary
     const folder = type === "cv" ? "cvs" : type === "logo" ? "logos" : "photos";
     const resourceType = type === "cv" ? "raw" : "image";
     const url = await uploadFile(base64, folder, resourceType);

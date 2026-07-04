@@ -1,11 +1,12 @@
 /*
  * Archivo: src/components/ui/FileUpload.tsx
  * Qué hace: Componente reutilizable para subir archivos a Cloudinary.
- * Acepta fotos de perfil, logos de empresas y CVs en PDF. Muestra una
- * vista previa de la imagen seleccionada, o un indicador con ícono y
- * "CV cargado" cuando ya existe un archivo guardado (currentUrl) o se
- * subió uno nuevo. Llama al endpoint /api/upload y devuelve la URL
- * del archivo subido via onUpload. Tema oscuro JobMatch.
+ * Acepta fotos de perfil, logos de empresas y CVs en PDF. Para imágenes,
+ * comprime en el cliente antes de subir: redimensiona a máx 1200px y
+ * convierte a JPEG calidad 85% usando Canvas API — sin dependencias extra.
+ * Esto permite aceptar imágenes grandes (hasta 10MB) y siempre entregar
+ * un archivo liviano (<300KB aprox) a Cloudinary. Muestra vista previa
+ * de imagen o indicador de CV cargado. Tema oscuro JobMatch.
  */
 
 "use client";
@@ -19,6 +20,62 @@ type FileUploadProps = {
   currentUrl?: string | null;
   label?: string;
 };
+
+const MAX_IMAGE_DIMENSION = 1200; // px — redimensiona si supera este valor
+const JPEG_QUALITY = 0.85;        // 85% calidad JPEG
+const MAX_IMAGE_SIZE_MB = 10;     // límite de entrada antes de comprimir
+
+// Comprime una imagen usando Canvas API del navegador.
+// Redimensiona proporcionalmente si supera MAX_IMAGE_DIMENSION,
+// y convierte a JPEG con JPEG_QUALITY. Devuelve un File comprimido.
+function compressImage(file: File): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+
+      let { width, height } = img;
+
+      // Redimensionar proporcionalmente si supera el máximo
+      if (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION) {
+        if (width > height) {
+          height = Math.round((height * MAX_IMAGE_DIMENSION) / width);
+          width = MAX_IMAGE_DIMENSION;
+        } else {
+          width = Math.round((width * MAX_IMAGE_DIMENSION) / height);
+          height = MAX_IMAGE_DIMENSION;
+        }
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { reject(new Error("Canvas no disponible")); return; }
+
+      ctx.drawImage(img, 0, 0, width, height);
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) { reject(new Error("Error al comprimir")); return; }
+          const compressed = new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), {
+            type: "image/jpeg",
+            lastModified: Date.now(),
+          });
+          resolve(compressed);
+        },
+        "image/jpeg",
+        JPEG_QUALITY
+      );
+    };
+
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Error al leer imagen")); };
+    img.src = url;
+  });
+}
 
 export default function FileUpload({
   type,
@@ -37,8 +94,6 @@ export default function FileUpload({
   const isImage = type === "photo" || type === "logo";
   const accept = isImage ? "image/*" : "application/pdf";
 
-  // Si currentUrl cambia (por ejemplo al cargar el perfil de forma asíncrona),
-  // actualizamos la vista previa para reflejar el archivo ya guardado
   useEffect(() => {
     if (isImage) {
       setPreview(currentUrl || null);
@@ -54,17 +109,30 @@ export default function FileUpload({
     setError(null);
     setUploading(true);
 
-    if (isImage) {
-      const reader = new FileReader();
-      reader.onload = (e) => setPreview(e.target?.result as string);
-      reader.readAsDataURL(file);
-    } else {
-      setFileName(file.name);
-    }
-
     try {
+      let fileToUpload = file;
+
+      if (isImage) {
+        // Validar tamaño antes de intentar comprimir
+        if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
+          setError(`La imagen no puede superar los ${MAX_IMAGE_SIZE_MB}MB.`);
+          setUploading(false);
+          return;
+        }
+
+        // Comprimir en el cliente antes de subir
+        fileToUpload = await compressImage(file);
+
+        // Mostrar preview con la imagen original (más rápido que esperar la comprimida)
+        const reader = new FileReader();
+        reader.onload = (ev) => setPreview(ev.target?.result as string);
+        reader.readAsDataURL(file);
+      } else {
+        setFileName(file.name);
+      }
+
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", fileToUpload);
       formData.append("type", type);
 
       const res = await fetch("/api/upload", {
@@ -83,7 +151,8 @@ export default function FileUpload({
 
       onUpload(data.url);
     } catch {
-      setError("Error al subir el archivo. Intentá de nuevo.");
+      setError("Error al procesar el archivo. Intentá de nuevo.");
+      setPreview(null);
     } finally {
       setUploading(false);
     }
@@ -117,9 +186,9 @@ export default function FileUpload({
             <IconUpload size={28} className="text-jm-text-tertiary" />
             <p className="text-sm text-jm-text-tertiary">
               {uploading
-                ? "Subiendo..."
+                ? "Procesando..."
                 : isImage
-                ? "Subir foto (JPG, PNG — máx 2MB)"
+                ? "Subir foto (JPG, PNG — máx 10MB)"
                 : "Subir CV (PDF — máx 5MB)"}
             </p>
           </div>
