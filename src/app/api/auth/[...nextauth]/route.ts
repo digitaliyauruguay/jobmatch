@@ -67,7 +67,7 @@ const handler = NextAuth({
       // Esto detecta bloqueos/desactivaciones sin depender del middleware Edge
       const now = Date.now();
       const lastCheck = (token.statusCheckedAt as number) || 0;
-      const CHECK_INTERVAL_MS = 60 * 1000; // 60 segundos
+      const CHECK_INTERVAL_MS = 15 * 1000; // 15 segundos
 
       if (now - lastCheck > CHECK_INTERVAL_MS) {
         try {
