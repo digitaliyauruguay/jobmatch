@@ -2,31 +2,24 @@
  * Archivo: src/middleware.ts
  * Qué hace: Protege las rutas de la aplicación según el rol del usuario.
  * Antes de que cualquier página cargue, verifica si el usuario está
- * autenticado, si tiene el rol correcto, y si su cuenta sigue activa
- * en la base de datos. Si fue bloqueado o desactivado mientras tenía
- * sesión abierta, se le fuerza el cierre de sesión inmediatamente.
- * También aplica rate limiting por IP en los endpoints críticos de auth
- * para proteger contra bots y ataques de fuerza bruta.
+ * autenticado y si tiene el rol correcto. El status del usuario se
+ * verifica en el JWT callback de NextAuth (cada 60s) — ya no necesitamos
+ * un fetch interno desde el middleware Edge, que no puede usar Prisma.
+ * También aplica rate limiting por IP en los endpoints críticos de auth.
  */
 
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 
-// ---------------------------------------------------------------------------
-// Rate limiting en memoria — Map por IP con ventana deslizante de 60 segundos.
-// Nota: no se comparte entre instancias serverless de Vercel (limitación
-// conocida y aceptada para el volumen actual). Migrar a Upstash/Redis si
-// el tráfico escala significativamente.
-// ---------------------------------------------------------------------------
-
+// Rate limiting en memoria por IP
 type RateLimitEntry = { count: number; resetAt: number };
 const rateLimitStore = new Map<string, RateLimitEntry>();
 
 const RATE_LIMITS: Record<string, { max: number; windowMs: number }> = {
-  "/api/auth/signin":           { max: 10, windowMs: 60_000 },
-  "/api/auth/register":         { max: 5,  windowMs: 60_000 },
-  "/api/auth/forgot-password":  { max: 5,  windowMs: 60_000 },
-  "/api/auth/reset-password":   { max: 5,  windowMs: 60_000 },
+  "/api/auth/signin":          { max: 10, windowMs: 60_000 },
+  "/api/auth/register":        { max: 5,  windowMs: 60_000 },
+  "/api/auth/forgot-password": { max: 5,  windowMs: 60_000 },
+  "/api/auth/reset-password":  { max: 5,  windowMs: 60_000 },
 };
 
 function getRealIp(req: NextRequest): string {
@@ -51,12 +44,10 @@ function isRateLimited(ip: string, pathname: string): boolean {
   }
 
   if (entry.count >= limit.max) return true;
-
   entry.count++;
   return false;
 }
 
-// Limpiar entradas expiradas periódicamente para evitar memory leak
 function pruneExpiredEntries() {
   const now = Date.now();
   for (const [key, entry] of rateLimitStore.entries()) {
@@ -64,17 +55,12 @@ function pruneExpiredEntries() {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Middleware principal
-// ---------------------------------------------------------------------------
-
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Limpiar entradas expiradas en cada request (liviano, O(n) del store)
   pruneExpiredEntries();
 
-  // Rate limiting — solo para endpoints de auth
+  // Rate limiting en endpoints de auth
   if (RATE_LIMITS[pathname]) {
     const ip = getRealIp(req);
     if (isRateLimited(ip, pathname)) {
@@ -87,39 +73,29 @@ export async function middleware(req: NextRequest) {
 
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
-  const isProtectedRoute =
-    pathname.startsWith("/worker/") ||
-    pathname.startsWith("/company/") ||
-    pathname.startsWith("/admin/");
-
-  // Verificar estado actual en la base de datos para rutas protegidas
-  if (isProtectedRoute && token) {
-    try {
-      const statusRes = await fetch(
-        `${req.nextUrl.origin}/api/auth/verify-status?userId=${token.id}`
-      );
-      const statusData = await statusRes.json();
-
-      if (statusData.status !== "ACTIVE") {
-        const response = NextResponse.redirect(new URL("/login", req.url));
-        response.cookies.delete("next-auth.session-token");
-        response.cookies.delete("__Secure-next-auth.session-token");
-        return response;
-      }
-    } catch (error) {
-      console.error("Error verificando estado en middleware:", error);
-    }
-  }
-
+  // Rutas protegidas — verificar rol y status desde el token JWT
+  // El status se re-verifica en DB cada 60s via JWT callback de NextAuth
   if (pathname.startsWith("/worker/")) {
     if (!token || token.role !== "WORKER") {
       return NextResponse.redirect(new URL("/login", req.url));
+    }
+    if (token.status !== "ACTIVE") {
+      const response = NextResponse.redirect(new URL("/login", req.url));
+      response.cookies.delete("next-auth.session-token");
+      response.cookies.delete("__Secure-next-auth.session-token");
+      return response;
     }
   }
 
   if (pathname.startsWith("/company/")) {
     if (!token || token.role !== "COMPANY") {
       return NextResponse.redirect(new URL("/login", req.url));
+    }
+    if (token.status !== "ACTIVE") {
+      const response = NextResponse.redirect(new URL("/login", req.url));
+      response.cookies.delete("next-auth.session-token");
+      response.cookies.delete("__Secure-next-auth.session-token");
+      return response;
     }
   }
 
@@ -129,17 +105,12 @@ export async function middleware(req: NextRequest) {
     }
   }
 
+  // Redirigir usuarios ya logueados fuera de páginas de auth
   if (pathname === "/" || pathname.startsWith("/login") || pathname.startsWith("/register")) {
     if (token) {
-      if (token.role === "WORKER") {
-        return NextResponse.redirect(new URL("/worker/dashboard", req.url));
-      }
-      if (token.role === "COMPANY") {
-        return NextResponse.redirect(new URL("/company/dashboard", req.url));
-      }
-      if (token.role === "ADMIN") {
-        return NextResponse.redirect(new URL("/admin/dashboard", req.url));
-      }
+      if (token.role === "WORKER") return NextResponse.redirect(new URL("/worker/dashboard", req.url));
+      if (token.role === "COMPANY") return NextResponse.redirect(new URL("/company/dashboard", req.url));
+      if (token.role === "ADMIN") return NextResponse.redirect(new URL("/admin/dashboard", req.url));
     }
   }
 
