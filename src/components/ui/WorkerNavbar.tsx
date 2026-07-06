@@ -3,8 +3,9 @@
  * Qué hace: Navbar flotante compartida para todas las páginas del
  * dashboard de trabajador. Hace su propio fetch del perfil (foto,
  * nombre) para mostrarlo de forma consistente en cualquier página,
- * junto con notificaciones y botón de salir. Se usa desde el layout
- * de (worker) para no duplicar esta lógica en cada página individual.
+ * junto con notificaciones y botón de salir. Refresca la sesión
+ * cada 15 segundos para detectar bloqueos/desactivaciones y forzar
+ * logout automático.
  */
 
 "use client";
@@ -16,7 +17,20 @@ import NotificationBell from "@/components/ui/NotificationBell";
 import { IconBriefcase, IconLogout } from "@tabler/icons-react";
 
 export default function WorkerNavbar() {
-  const { data: session } = useSession();
+  const { data: session, update } = useSession();
+
+  // Refrescar sesión cada 15 segundos para detectar bloqueos/desactivaciones
+  useEffect(() => {
+    const interval = setInterval(() => { update(); }, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Refrescar también al volver a la pestaña
+  useEffect(() => {
+    const handleFocus = () => { update(); };
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, []);
   const [profile, setProfile] = useState<{ firstName: string; photo: string | null } | null>(null);
 
   useEffect(() => {
@@ -29,6 +43,13 @@ export default function WorkerNavbar() {
     };
     fetchProfile();
   }, []);
+
+  // Detectar bloqueo/desactivación y forzar logout
+  useEffect(() => {
+    if (session?.user?.status === "BLOCKED" || session?.user?.status === "INACTIVE") {
+      signOut({ callbackUrl: "/login" });
+    }
+  }, [session?.user?.status]);
 
   return (
     <div className="sticky top-0 z-40 px-4 pt-4 pb-2 bg-jm-black">
