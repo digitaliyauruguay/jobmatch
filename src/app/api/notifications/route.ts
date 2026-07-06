@@ -1,7 +1,8 @@
 /*
  * Archivo: src/app/api/notifications/route.ts
- * Qué hace: Devuelve todas las notificaciones del usuario autenticado
- * ordenadas por fecha, las más recientes primero.
+ * Qué hace: Devuelve todas las notificaciones visibles del usuario
+ * autenticado (excluye las marcadas como hidden). Ordenadas por fecha,
+ * las más recientes primero.
  * Solo accesible por usuarios autenticados.
  */
 
@@ -18,7 +19,10 @@ export async function GET(req: NextRequest) {
     }
 
     const notifications = await prisma.notification.findMany({
-      where: { userId: token.id as string },
+      where: {
+        userId: token.id as string,
+        hidden: false,
+      },
       orderBy: { createdAt: "desc" },
     });
 
