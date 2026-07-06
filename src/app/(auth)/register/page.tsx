@@ -164,7 +164,12 @@ function RegisterPageContent() {
   };
 
   const handleRegister = async () => {
-    if (honeypot) return;
+    // Si el honeypot tiene valor, es probable que sea un bot o autocompletado del navegador
+    // Limpiar el honeypot y continuar — no bloqueamos silenciosamente
+    if (honeypot) {
+      setHoneypot("");
+      return;
+    }
     if (!validateStep3()) return;
 
     setLoading(true);
@@ -251,10 +256,10 @@ function RegisterPageContent() {
           {/* Paso 2 */}
           {step === 2 && (
             <div className="flex flex-col gap-4">
-              {/* Honeypot */}
-              <div style={{ position:"absolute", left:"-9999px", top:"-9999px" }} aria-hidden="true">
-                <input type="text" name="website" value={honeypot}
-                  onChange={(e) => setHoneypot(e.target.value)} tabIndex={-1} autoComplete="off" />
+              {/* Honeypot — nombre poco obvio para evitar autocompletado del navegador */}
+              <div style={{ position:"absolute", left:"-9999px", top:"-9999px", opacity:0, pointerEvents:"none" }} aria-hidden="true">
+                <input type="text" name="jm_url_field" value={honeypot}
+                  onChange={(e) => setHoneypot(e.target.value)} tabIndex={-1} autoComplete="nope" />
               </div>
 
               <div className="flex flex-col gap-1">
