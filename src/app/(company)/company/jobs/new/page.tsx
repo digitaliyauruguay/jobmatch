@@ -1,98 +1,141 @@
 /*
  * Archivo: src/app/(company)/company/jobs/new/page.tsx
- * Qué hace: Página para que una empresa cree nuevas ofertas de trabajo
- * con tema oscuro JobMatch. Permite seleccionar categoría, departamento,
- * modalidad, tipo de trabajo y completar la información de la oferta.
- * Envía los datos a /api/jobs y redirige al dashboard de la empresa
- * en caso de éxito. La navbar la provee el layout compartido.
+ * Qué hace: Página para que la empresa cree una nueva oferta de trabajo.
+ * Validación campo por campo en orden con mensajes descriptivos,
+ * asteriscos en campos obligatorios, y feedback de procesando/éxito
+ * en el botón de submit. Mensajes con ícono y auto-dismiss de 4 segundos.
+ * La navbar la provee el layout compartido.
  */
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { IconArrowLeft } from "@tabler/icons-react";
+import { IconArrowLeft, IconX, IconCheck, IconLoader2 } from "@tabler/icons-react";
 
-type Category = {
-  id: string;
-  name: string;
+type Category = { id: string; name: string };
+type Message = { type: "error" | "success"; text: string } | null;
+
+const DEPARTMENTS = [
+  "MONTEVIDEO","CANELONES","MALDONADO","ROCHA","TREINTA_Y_TRES",
+  "CERRO_LARGO","RIVERA","ARTIGAS","SALTO","PAYSANDU","RIO_NEGRO",
+  "SORIANO","COLONIA","SAN_JOSE","FLORES","FLORIDA","DURAZNO",
+  "TACUAREMBO","LAVALLEJA",
+];
+
+const DEPARTMENT_LABELS: Record<string,string> = {
+  MONTEVIDEO:"Montevideo",CANELONES:"Canelones",MALDONADO:"Maldonado",
+  ROCHA:"Rocha",TREINTA_Y_TRES:"Treinta y Tres",CERRO_LARGO:"Cerro Largo",
+  RIVERA:"Rivera",ARTIGAS:"Artigas",SALTO:"Salto",PAYSANDU:"Paysandú",
+  RIO_NEGRO:"Río Negro",SORIANO:"Soriano",COLONIA:"Colonia",
+  SAN_JOSE:"San José",FLORES:"Flores",FLORIDA:"Florida",
+  DURAZNO:"Durazno",TACUAREMBO:"Tacuarembó",LAVALLEJA:"Lavalleja",
 };
 
-export default function CreateJobPage() {
-  const router = useRouter();
+function RequiredLabel({ children }: { children: string }) {
+  return (
+    <label className="text-sm text-jm-text-secondary flex items-center gap-1">
+      {children}
+      <span className="text-jm-red-light">*</span>
+    </label>
+  );
+}
 
+function MessageBanner({ message }: { message: Message }) {
+  if (!message) return null;
+  return (
+    <div className={`flex items-start gap-2 px-3 py-2.5 rounded-lg text-sm ${
+      message.type === "error"
+        ? "bg-jm-red-bg border border-jm-red text-jm-red-light"
+        : "bg-jm-green-bg border border-jm-green text-jm-green-light"
+    }`}>
+      {message.type === "error"
+        ? <IconX size={16} className="mt-0.5 flex-shrink-0" />
+        : <IconCheck size={16} className="mt-0.5 flex-shrink-0" />}
+      <span>{message.text}</span>
+    </div>
+  );
+}
+
+export default function NewJobPage() {
+  const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
+  const [message, setMessage] = useState<Message>(null);
   const [loading, setLoading] = useState(false);
-  const [fetchingCategories, setFetchingCategories] = useState(true);
 
   const [form, setForm] = useState({
     title: "",
     description: "",
+    categoryId: "",
     department: "",
     modality: "",
     jobType: "",
     salary: "",
-    categoryId: "",
   });
 
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const res = await fetch("/api/categories");
-        const data = await res.json();
-        setCategories(data);
-      } catch (error) {
-        console.error("Error cargando categorías:", error);
-      } finally {
-        setFetchingCategories(false);
-      }
-    };
-
-    fetchCategories();
+    fetch("/api/categories").then((r) => r.json()).then(setCategories);
   }, []);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
+  // Auto-dismiss del mensaje después de 4 segundos
+  useEffect(() => {
+    if (!message) return;
+    const timer = setTimeout(() => setMessage(null), 4000);
+    return () => clearTimeout(timer);
+  }, [message]);
+
+  const showError = (text: string) => setMessage({ type: "error", text });
+  const showSuccess = (text: string) => setMessage({ type: "success", text });
+
+  const validate = () => {
+    if (!form.title.trim()) { showError("El título de la oferta es obligatorio."); return false; }
+    if (form.title.trim().length < 4) { showError("El título debe tener al menos 4 caracteres."); return false; }
+    if (!form.description.trim()) { showError("La descripción es obligatoria."); return false; }
+    if (form.description.trim().length < 20) { showError("La descripción debe tener al menos 20 caracteres."); return false; }
+    if (!form.categoryId) { showError("Seleccioná una categoría."); return false; }
+    if (!form.department) { showError("Seleccioná el departamento."); return false; }
+    if (!form.modality) { showError("Seleccioná la modalidad de trabajo."); return false; }
+    if (!form.jobType) { showError("Seleccioná el tipo de trabajo."); return false; }
+    return true;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
+    if (!validate()) return;
+
     setLoading(true);
+    setMessage(null);
 
     try {
       const res = await fetch("/api/jobs", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(form),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...form,
+          title: form.title.trim(),
+          description: form.description.trim(),
+          salary: form.salary.trim() || null,
+        }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.error || "Error al crear la oferta");
+        showError(data.error || "Ocurrió un error al crear la oferta. Intentá de nuevo.");
         setLoading(false);
         return;
       }
 
-      router.push("/company/dashboard");
-    } catch (error) {
-      console.error("Error:", error);
-      alert("Error interno del servidor");
-    } finally {
+      showSuccess("¡Oferta creada correctamente! Redirigiendo...");
+      setTimeout(() => router.push("/company/dashboard"), 1500);
+    } catch {
+      showError("Ocurrió un error inesperado. Verificá tu conexión e intentá de nuevo.");
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
+    <div className="max-w-2xl mx-auto px-4 py-8">
       <Link
         href="/company/dashboard"
         className="flex items-center gap-1.5 text-sm text-jm-text-secondary hover:text-jm-text transition-colors cursor-pointer mb-6"
@@ -101,121 +144,82 @@ export default function CreateJobPage() {
         Volver
       </Link>
 
-      <h1 className="text-xl font-medium text-jm-text mb-6">Crear oferta</h1>
+      <h1 className="text-xl font-medium text-jm-text mb-6">Nueva oferta de trabajo</h1>
 
-      <form
-        onSubmit={handleSubmit}
-        className="bg-jm-card border border-jm-border rounded-2xl p-6 space-y-5"
-      >
-        {/* Título */}
-        <div>
-          <label className="text-sm font-medium text-jm-text-secondary">Título</label>
+      <div className="bg-jm-card border border-jm-border rounded-2xl p-6 flex flex-col gap-5">
+
+        <div className="flex flex-col gap-1">
+          <RequiredLabel>Título de la oferta</RequiredLabel>
           <input
             type="text"
-            name="title"
             value={form.title}
-            onChange={handleChange}
-            className="w-full mt-1 bg-jm-card-hover border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta"
-            placeholder="Ej: Reponedor para supermercado"
-            required
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            className="bg-jm-card-hover border border-jm-border rounded-lg px-4 py-2.5 text-sm text-jm-text focus:outline-none focus:border-jm-magenta"
+            placeholder="Ej: Repositor de mercadería"
           />
         </div>
 
-        {/* Descripción */}
-        <div>
-          <label className="text-sm font-medium text-jm-text-secondary">Descripción</label>
+        <div className="flex flex-col gap-1">
+          <RequiredLabel>Descripción</RequiredLabel>
           <textarea
-            name="description"
             value={form.description}
-            onChange={handleChange}
-            className="w-full mt-1 bg-jm-card-hover border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta min-h-[120px]"
-            placeholder="Describe el puesto, tareas, requisitos, etc."
-            required
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            className="bg-jm-card-hover border border-jm-border rounded-lg px-4 py-2.5 text-sm text-jm-text focus:outline-none focus:border-jm-magenta resize-none"
+            rows={4}
+            placeholder="Describí las tareas, requisitos y condiciones del puesto..."
           />
         </div>
 
-        {/* Categoría */}
-        <div>
-          <label className="text-sm font-medium text-jm-text-secondary">Categoría</label>
+        <div className="flex flex-col gap-1">
+          <RequiredLabel>Categoría</RequiredLabel>
           <select
-            name="categoryId"
             value={form.categoryId}
-            onChange={handleChange}
-            className="w-full mt-1 bg-jm-card-hover border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer"
-            required
+            onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
+            className="bg-jm-card-hover border border-jm-border rounded-lg px-4 py-2.5 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer"
           >
-            <option value="">
-              {fetchingCategories ? "Cargando..." : "Seleccionar categoría"}
-            </option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
+            <option value="">Seleccioná una categoría</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
         </div>
 
-        {/* Departamento */}
-        <div>
-          <label className="text-sm font-medium text-jm-text-secondary">Departamento</label>
+        <div className="flex flex-col gap-1">
+          <RequiredLabel>Departamento</RequiredLabel>
           <select
-            name="department"
             value={form.department}
-            onChange={handleChange}
-            className="w-full mt-1 bg-jm-card-hover border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer"
-            required
+            onChange={(e) => setForm({ ...form, department: e.target.value })}
+            className="bg-jm-card-hover border border-jm-border rounded-lg px-4 py-2.5 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer"
           >
-            <option value="">Seleccionar</option>
-            <option value="MONTEVIDEO">Montevideo</option>
-            <option value="CANELONES">Canelones</option>
-            <option value="MALDONADO">Maldonado</option>
-            <option value="ROCHA">Rocha</option>
-            <option value="TREINTA_Y_TRES">Treinta y Tres</option>
-            <option value="CERRO_LARGO">Cerro Largo</option>
-            <option value="RIVERA">Rivera</option>
-            <option value="ARTIGAS">Artigas</option>
-            <option value="SALTO">Salto</option>
-            <option value="PAYSANDU">Paysandú</option>
-            <option value="RIO_NEGRO">Río Negro</option>
-            <option value="SORIANO">Soriano</option>
-            <option value="COLONIA">Colonia</option>
-            <option value="SAN_JOSE">San José</option>
-            <option value="FLORES">Flores</option>
-            <option value="FLORIDA">Florida</option>
-            <option value="DURAZNO">Durazno</option>
-            <option value="TACUAREMBO">Tacuarembó</option>
-            <option value="LAVALLEJA">Lavalleja</option>
+            <option value="">Seleccioná el departamento</option>
+            {DEPARTMENTS.map((d) => (
+              <option key={d} value={d}>{DEPARTMENT_LABELS[d]}</option>
+            ))}
           </select>
         </div>
 
-        {/* Modalidad */}
-        <div>
-          <label className="text-sm font-medium text-jm-text-secondary">Modalidad</label>
+        <div className="flex flex-col gap-1">
+          <RequiredLabel>Modalidad</RequiredLabel>
           <select
-            name="modality"
             value={form.modality}
-            onChange={handleChange}
-            className="w-full mt-1 bg-jm-card-hover border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer"
-            required
+            onChange={(e) => setForm({ ...form, modality: e.target.value })}
+            className="bg-jm-card-hover border border-jm-border rounded-lg px-4 py-2.5 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer"
           >
-            <option value="">Seleccionar</option>
+            <option value="">Seleccioná la modalidad</option>
             <option value="PRESENTIAL">Presencial</option>
             <option value="REMOTE">Remoto</option>
             <option value="HYBRID">Híbrido</option>
           </select>
         </div>
 
-        {/* Tipo de trabajo */}
-        <div>
-          <label className="text-sm font-medium text-jm-text-secondary">Tipo de trabajo</label>
+        <div className="flex flex-col gap-1">
+          <RequiredLabel>Tipo de trabajo</RequiredLabel>
           <select
-            name="jobType"
             value={form.jobType}
-            onChange={handleChange}
-            className="w-full mt-1 bg-jm-card-hover border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer"
-            required
+            onChange={(e) => setForm({ ...form, jobType: e.target.value })}
+            className="bg-jm-card-hover border border-jm-border rounded-lg px-4 py-2.5 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer"
           >
-            <option value="">Seleccionar</option>
+            <option value="">Seleccioná el tipo</option>
             <option value="FULL_TIME">Tiempo completo</option>
             <option value="PART_TIME">Medio tiempo</option>
             <option value="TEMPORARY">Temporal</option>
@@ -223,30 +227,37 @@ export default function CreateJobPage() {
           </select>
         </div>
 
-        {/* Salario */}
-        <div>
-          <label className="text-sm font-medium text-jm-text-secondary">Salario (opcional)</label>
+        <div className="flex flex-col gap-1">
+          <label className="text-sm text-jm-text-secondary">
+            Salario <span className="text-jm-text-tertiary">(opcional)</span>
+          </label>
           <input
             type="text"
-            name="salary"
             value={form.salary}
-            onChange={handleChange}
-            className="w-full mt-1 bg-jm-card-hover border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta"
-            placeholder="Ej: $25.000 - $35.000"
+            onChange={(e) => setForm({ ...form, salary: e.target.value })}
+            className="bg-jm-card-hover border border-jm-border rounded-lg px-4 py-2.5 text-sm text-jm-text focus:outline-none focus:border-jm-magenta"
+            placeholder="Ej: $25.000 - $30.000 o 'A convenir'"
           />
         </div>
 
-        {/* Botón */}
-        <div className="pt-2">
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-jm-magenta text-white py-2 rounded-lg text-sm font-medium shadow-[0_0_0_0_rgba(212,83,126,0)] hover:shadow-[0_0_20px_2px_rgba(212,83,126,0.45)] hover:bg-jm-magenta-light hover:text-jm-magenta-bg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-          >
-            {loading ? "Publicando..." : "Publicar oferta"}
-          </button>
-        </div>
-      </form>
+        <MessageBanner message={message} />
+
+        <p className="text-xs text-jm-text-tertiary">
+          <span className="text-jm-red-light">*</span> Campo obligatorio
+        </p>
+
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          className="bg-jm-magenta text-white rounded-lg py-2.5 text-sm font-medium shadow-[0_0_0_0_rgba(212,83,126,0)] hover:shadow-[0_0_20px_2px_rgba(212,83,126,0.45)] hover:bg-jm-magenta-light hover:text-jm-magenta-bg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
+        >
+          {loading ? (
+            <><IconLoader2 size={16} className="animate-spin" />Procesando...</>
+          ) : (
+            "Publicar oferta"
+          )}
+        </button>
+      </div>
     </div>
   );
 }
