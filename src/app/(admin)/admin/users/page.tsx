@@ -7,11 +7,8 @@
  * Rechazar (desde PENDING) y Bloquear (desde ACTIVE) abren un input de
  * motivo opcional: si se confirma, se crea una Observation vía
  * /api/admin/observations (que además bloquea al usuario y lo notifica).
- * Las demás transiciones (aprobar, desactivar, desbloquear, reactivar)
- * no llevan motivo y usan el PATCH simple de status. El nombre es un
- * link a la vista de perfil individual (/admin/users/[id]) cuando el
- * usuario tiene un workerProfile/companyProfile creado. En mobile el
- * listado se muestra como tarjetas apiladas en vez de tabla.
+ * Las demás transiciones muestran un modal de cargando → éxito antes
+ * de recargar la lista. En mobile el listado se muestra como tarjetas.
  * La navbar la provee el layout compartido.
  */
 
@@ -20,7 +17,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Badge from "@/components/ui/Badge";
-import { IconArrowLeft } from "@tabler/icons-react";
+import { IconArrowLeft, IconCheck, IconLoader2 } from "@tabler/icons-react";
 
 type User = {
   id: string;
@@ -41,12 +38,21 @@ type User = {
   };
 };
 
+type ActionState = { userId: string; status: "loading" | "success"; label: string } | null;
+
+const ACTION_LABELS: Record<string, string> = {
+  ACTIVE: "Aprobado correctamente",
+  INACTIVE: "Cuenta desactivada",
+  BLOCKED: "Cuenta bloqueada",
+};
+
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [filter, setFilter] = useState("PENDING");
   const [loading, setLoading] = useState(true);
   const [observationUserId, setObservationUserId] = useState<string | null>(null);
   const [observationMessage, setObservationMessage] = useState("");
+  const [actionState, setActionState] = useState<ActionState>(null);
 
   const fetchUsers = async (status: string) => {
     setLoading(true);
@@ -60,8 +66,10 @@ export default function AdminUsersPage() {
     fetchUsers(filter);
   }, [filter]);
 
-  // Transiciones simples, sin motivo: aprobar, desactivar, desbloquear, reactivar
+  // Transiciones simples con modal de feedback
   const updateStatus = async (userId: string, status: string) => {
+    setActionState({ userId, status: "loading", label: "" });
+
     const res = await fetch(`/api/admin/users/${userId}/status`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -69,13 +77,20 @@ export default function AdminUsersPage() {
     });
 
     if (res.ok) {
-      fetchUsers(filter);
+      setActionState({ userId, status: "success", label: ACTION_LABELS[status] || "Acción realizada" });
+      setTimeout(async () => {
+        setActionState(null);
+        await fetchUsers(filter);
+      }, 1500);
+    } else {
+      setActionState(null);
     }
   };
 
-  // Bloquear/rechazar con motivo (opcional): crea Observation, que a su
-  // vez bloquea al usuario y lo notifica por email + notificación interna
+  // Bloquear/rechazar con motivo
   const blockWithObservation = async (userId: string, message: string) => {
+    setActionState({ userId, status: "loading", label: "" });
+
     const res = await fetch(`/api/admin/observations`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -89,23 +104,27 @@ export default function AdminUsersPage() {
     if (res.ok) {
       setObservationUserId(null);
       setObservationMessage("");
-      fetchUsers(filter);
+      setActionState({
+        userId,
+        status: "success",
+        label: filter === "PENDING" ? "Cuenta rechazada" : "Cuenta bloqueada",
+      });
+      setTimeout(async () => {
+        setActionState(null);
+        await fetchUsers(filter);
+      }, 1500);
+    } else {
+      setActionState(null);
     }
   };
 
   const getName = (user: User) => {
-    if (user.workerProfile) {
-      return `${user.workerProfile.firstName} ${user.workerProfile.lastName}`;
-    }
-    if (user.companyProfile) {
-      return user.companyProfile.name;
-    }
+    if (user.workerProfile) return `${user.workerProfile.firstName} ${user.workerProfile.lastName}`;
+    if (user.companyProfile) return user.companyProfile.name;
     return "Sin perfil completado";
   };
 
-  const getProfileId = (user: User) => {
-    return user.workerProfile?.id || user.companyProfile?.id || null;
-  };
+  const getProfileId = (user: User) => user.workerProfile?.id || user.companyProfile?.id || null;
 
   const getDepartment = (user: User) => {
     if (user.workerProfile) return user.workerProfile.department;
@@ -113,8 +132,6 @@ export default function AdminUsersPage() {
     return "-";
   };
 
-  // Nombre, como link al perfil individual si hay profileId, compartido
-  // entre la vista de tabla y la de cards
   const renderName = (user: User) => {
     const profileId = getProfileId(user);
     if (profileId) {
@@ -130,61 +147,90 @@ export default function AdminUsersPage() {
     return <span className="text-jm-text">{getName(user)}</span>;
   };
 
-  // Bloque de acciones, compartido entre la vista de tabla y la de cards
-  const renderActions = (user: User) => (
-    <div className="flex gap-2 flex-wrap">
-      {filter === "PENDING" && (
-        <>
+  const renderActions = (user: User) => {
+    // Si hay una acción en curso para este usuario, mostrar feedback inline
+    if (actionState?.userId === user.id) {
+      return (
+        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium ${
+          actionState.status === "loading"
+            ? "bg-jm-card-hover text-jm-text-secondary"
+            : "bg-jm-green-bg text-jm-green-light"
+        }`}>
+          {actionState.status === "loading" ? (
+            <>
+              <IconLoader2 size={14} className="animate-spin" />
+              Procesando...
+            </>
+          ) : (
+            <>
+              <IconCheck size={14} />
+              {actionState.label}
+            </>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex gap-2 flex-wrap">
+        {filter === "PENDING" && (
+          <>
+            <button
+              onClick={() => updateStatus(user.id, "ACTIVE")}
+              disabled={!!actionState}
+              className="px-3 py-1 bg-jm-green text-white rounded-lg text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Aprobar
+            </button>
+            <button
+              onClick={() => setObservationUserId(user.id)}
+              disabled={!!actionState}
+              className="px-3 py-1 bg-jm-red text-white rounded-lg text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Rechazar
+            </button>
+          </>
+        )}
+        {filter === "ACTIVE" && (
+          <>
+            <button
+              onClick={() => updateStatus(user.id, "INACTIVE")}
+              disabled={!!actionState}
+              className="px-3 py-1 bg-jm-gray text-white rounded-lg text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Desactivar
+            </button>
+            <button
+              onClick={() => setObservationUserId(user.id)}
+              disabled={!!actionState}
+              className="px-3 py-1 bg-jm-red text-white rounded-lg text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Bloquear
+            </button>
+          </>
+        )}
+        {filter === "BLOCKED" && (
           <button
             onClick={() => updateStatus(user.id, "ACTIVE")}
-            className="px-3 py-1 bg-jm-green text-white rounded-lg text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer"
+            disabled={!!actionState}
+            className="px-3 py-1 bg-jm-green text-white rounded-lg text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Aprobar
+            Desbloquear
           </button>
+        )}
+        {filter === "INACTIVE" && (
           <button
-            onClick={() => setObservationUserId(user.id)}
-            className="px-3 py-1 bg-jm-red text-white rounded-lg text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer"
+            onClick={() => updateStatus(user.id, "ACTIVE")}
+            disabled={!!actionState}
+            className="px-3 py-1 bg-jm-magenta text-white rounded-lg text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Rechazar
+            Reactivar
           </button>
-        </>
-      )}
-      {filter === "ACTIVE" && (
-        <>
-          <button
-            onClick={() => updateStatus(user.id, "INACTIVE")}
-            className="px-3 py-1 bg-jm-gray text-white rounded-lg text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer"
-          >
-            Desactivar
-          </button>
-          <button
-            onClick={() => setObservationUserId(user.id)}
-            className="px-3 py-1 bg-jm-red text-white rounded-lg text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer"
-          >
-            Bloquear
-          </button>
-        </>
-      )}
-      {filter === "BLOCKED" && (
-        <button
-          onClick={() => updateStatus(user.id, "ACTIVE")}
-          className="px-3 py-1 bg-jm-green text-white rounded-lg text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer"
-        >
-          Desbloquear
-        </button>
-      )}
-      {filter === "INACTIVE" && (
-        <button
-          onClick={() => updateStatus(user.id, "ACTIVE")}
-          className="px-3 py-1 bg-jm-magenta text-white rounded-lg text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer"
-        >
-          Reactivar
-        </button>
-      )}
-    </div>
-  );
+        )}
+      </div>
+    );
+  };
 
-  // Input de motivo inline, compartido entre tabla y cards
   const renderObservationInput = (user: User) => (
     <div className="flex gap-2 items-center flex-wrap p-2 bg-jm-red-bg border-2 border-jm-red rounded-lg mt-2">
       <input
@@ -203,10 +249,7 @@ export default function AdminUsersPage() {
         {filter === "PENDING" ? "Confirmar rechazo" : "Confirmar bloqueo"}
       </button>
       <button
-        onClick={() => {
-          setObservationUserId(null);
-          setObservationMessage("");
-        }}
+        onClick={() => { setObservationUserId(null); setObservationMessage(""); }}
         className="px-3 py-1.5 bg-jm-card-hover text-jm-text-secondary rounded-lg text-sm hover:text-jm-text transition-colors cursor-pointer"
       >
         Cancelar
@@ -235,6 +278,7 @@ export default function AdminUsersPage() {
               setFilter(s);
               setObservationUserId(null);
               setObservationMessage("");
+              setActionState(null);
             }}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
               filter === s

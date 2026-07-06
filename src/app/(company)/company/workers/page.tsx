@@ -1,11 +1,13 @@
 /*
- * Archivo: src/app/(company)/company/workers/page.tsx
- * Qué hace: Página para que la empresa busque trabajadores disponibles
- * y los indique para una de sus ofertas publicadas. Permite filtrar
- * por categoría y departamento. Muestra el perfil básico de cada
- * trabajador y permite seleccionar a cuál oferta indicarlo.
- * Al indicar se crea una postulación con origin INDICATED y se notifica
- * al trabajador por email y notificación interna.
+ * Archivo: src/app/(company)/company/dashboard/page.tsx
+ * Qué hace: Dashboard principal de la empresa con tema oscuro JobMatch.
+ * Para ofertas ACTIVE muestra postulaciones recibidas e indicadas,
+ * con acciones de aprobar/rechazar con feedback inline. Para ofertas
+ * COMPLETED muestra la fecha de cierre y los trabajadores aprobados.
+ * Para ofertas BLOCKED muestra el motivo. Las acciones sobre ofertas
+ * (completar, eliminar) y postulaciones (aprobar, rechazar) muestran
+ * feedback Procesando → éxito antes de recargar. La navbar la provee
+ * el layout compartido.
  */
 
 "use client";
@@ -14,37 +16,58 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
-import { IconFileText, IconArrowLeft } from "@tabler/icons-react";
+import {
+  IconUsers, IconPlus, IconFileText, IconCalendar,
+  IconUserCheck, IconAlertTriangle, IconCheck, IconLoader2,
+} from "@tabler/icons-react";
 
-type Worker = {
+type Application = {
   id: string;
-  firstName: string;
-  lastName: string;
-  department: string;
-  availability: string;
-  description: string | null;
-  phone: string;
-  cvUrl: string | null;
-  categories: { category: { name: string } }[];
+  origin: string;
+  status: string;
+  createdAt: string;
+  worker: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    department: string;
+    phone: string;
+    availability: string;
+    cvUrl: string | null;
+    categories: { category: { name: string } }[];
+  };
+};
+
+type Observation = {
+  id: string;
+  message: string;
+  createdAt: string;
+  admin: { email: string };
 };
 
 type Job = {
   id: string;
   title: string;
+  status: string;
+  modality: string;
+  jobType: string;
+  department: string;
+  salary: string | null;
+  createdAt: string;
+  completedAt: string | null;
+  category: { name: string };
+  observations: Observation[];
 };
 
-type Category = {
-  id: string;
-  name: string;
-};
+type ActionState = { id: string; status: "loading" | "success"; label: string } | null;
 
+const MODALITY_LABELS: Record<string, string> = {
+  PRESENTIAL: "Presencial", REMOTE: "Remoto", HYBRID: "Híbrido",
+};
 const AVAILABILITY_LABELS: Record<string, string> = {
-  IMMEDIATE: "Disponible de inmediato",
-  ONE_WEEK: "En una semana",
-  TWO_WEEKS: "En dos semanas",
-  ONE_MONTH: "En un mes",
+  IMMEDIATE: "Disponible de inmediato", ONE_WEEK: "En una semana",
+  TWO_WEEKS: "En dos semanas", ONE_MONTH: "En un mes",
 };
-
 const DEPARTMENT_LABELS: Record<string, string> = {
   MONTEVIDEO: "Montevideo", CANELONES: "Canelones", MALDONADO: "Maldonado",
   ROCHA: "Rocha", TREINTA_Y_TRES: "Treinta y Tres", CERRO_LARGO: "Cerro Largo",
@@ -54,216 +77,365 @@ const DEPARTMENT_LABELS: Record<string, string> = {
   DURAZNO: "Durazno", TACUAREMBO: "Tacuarembó", LAVALLEJA: "Lavalleja",
 };
 
-export default function CompanyWorkersPage() {
-  const [workers, setWorkers] = useState<Worker[]>([]);
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [indicating, setIndicating] = useState<string | null>(null);
-  const [selectedJob, setSelectedJob] = useState<Record<string, string>>({});
-  const [indicated, setIndicated] = useState<string[]>([]);
-  const [error, setError] = useState<Record<string, string>>({});
-  const [filters, setFilters] = useState({
-    categoryId: "",
-    department: "",
+function formatDateTime(dateString: string) {
+  return new Date(dateString).toLocaleDateString("es-UY", {
+    day: "numeric", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
   });
+}
 
-  const fetchWorkers = async () => {
-    setLoading(true);
-    const params = new URLSearchParams();
-    if (filters.categoryId) params.append("categoryId", filters.categoryId);
-    if (filters.department) params.append("department", filters.department);
+function FeedbackChip({ state }: { state: ActionState }) {
+  if (!state) return null;
+  return (
+    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium ${
+      state.status === "loading"
+        ? "bg-jm-card-hover text-jm-text-secondary"
+        : "bg-jm-green-bg text-jm-green-light"
+    }`}>
+      {state.status === "loading"
+        ? <><IconLoader2 size={14} className="animate-spin" />Procesando...</>
+        : <><IconCheck size={14} />{state.label}</>}
+    </div>
+  );
+}
 
-    const res = await fetch(`/api/workers?${params.toString()}`);
+export default function CompanyDashboard() {
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [selectedJob, setSelectedJob] = useState<string | null>(null);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [loadingJobs, setLoadingJobs] = useState(true);
+  const [loadingApps, setLoadingApps] = useState(false);
+  const [activeTab, setActiveTab] = useState<"SELF" | "INDICATED">("SELF");
+  const [jobFilter, setJobFilter] = useState<"ALL" | "ACTIVE" | "BLOCKED" | "DELETED" | "COMPLETED">("ACTIVE");
+  const [jobActionState, setJobActionState] = useState<ActionState>(null);
+  const [appActionState, setAppActionState] = useState<ActionState>(null);
+
+  const fetchJobs = async () => {
+    setLoadingJobs(true);
+    const res = await fetch("/api/companies/me/jobs");
     const data = await res.json();
-    setWorkers(data);
-    setLoading(false);
+    setJobs(data);
+    setLoadingJobs(false);
+  };
+
+  const fetchApplications = async (jobId: string) => {
+    setLoadingApps(true);
+    const res = await fetch(`/api/applications/job/${jobId}`);
+    const data = await res.json();
+    setApplications(data);
+    setLoadingApps(false);
   };
 
   useEffect(() => {
-    const fetchInitial = async () => {
-      const [jobsRes, categoriesRes] = await Promise.all([
-        fetch("/api/companies/me/jobs"),
-        fetch("/api/categories"),
-      ]);
-      const jobsData = await jobsRes.json();
-      const categoriesData = await categoriesRes.json();
-      setJobs(jobsData.filter((j: any) => j.status === "ACTIVE"));
-      setCategories(categoriesData);
-    };
-    fetchInitial();
-    fetchWorkers();
+    fetchJobs();
+    const jobsInterval = setInterval(fetchJobs, 30000);
+    return () => clearInterval(jobsInterval);
   }, []);
 
   useEffect(() => {
-    fetchWorkers();
-  }, [filters]);
+    if (!selectedJob) return;
+    const job = jobs.find((j) => j.id === selectedJob);
+    if (job?.status !== "ACTIVE") return;
+    const appsInterval = setInterval(() => fetchApplications(selectedJob), 30000);
+    return () => clearInterval(appsInterval);
+  }, [selectedJob, jobs]);
 
-  const handleIndicate = async (workerId: string) => {
-    const jobId = selectedJob[workerId];
-    if (!jobId) {
-      setError({ ...error, [workerId]: "Seleccioná una oferta primero" });
-      return;
-    }
-
-    setIndicating(workerId);
-    setError({ ...error, [workerId]: "" });
-
-    const res = await fetch("/api/applications/indicate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ jobId, workerId }),
-    });
-
-    const data = await res.json();
-
-    if (res.ok) {
-      setIndicated((prev) => [...prev, `${workerId}-${jobId}`]);
-    } else {
-      setError({ ...error, [workerId]: data.error });
-    }
-
-    setIndicating(null);
+  const handleSelectJob = (jobId: string, jobStatus: string) => {
+    setSelectedJob(jobId);
+    setAppActionState(null);
+    if (jobStatus === "ACTIVE") fetchApplications(jobId);
   };
 
+  const handleDeleteJob = async (jobId: string) => {
+    if (!confirm("¿Estás seguro de eliminar esta oferta? Esta acción no se puede deshacer.")) return;
+    setJobActionState({ id: jobId, status: "loading", label: "" });
+    const res = await fetch(`/api/jobs/${jobId}`, { method: "DELETE" });
+    if (res.ok) {
+      setJobActionState({ id: jobId, status: "success", label: "Oferta eliminada" });
+      setTimeout(async () => {
+        setJobActionState(null);
+        if (selectedJob === jobId) setSelectedJob(null);
+        await fetchJobs();
+      }, 1500);
+    } else {
+      setJobActionState(null);
+    }
+  };
+
+  const handleCompleteJob = async (jobId: string) => {
+    if (!confirm("¿Marcar esta oferta como completada?")) return;
+    setJobActionState({ id: jobId, status: "loading", label: "" });
+    const res = await fetch(`/api/jobs/${jobId}/complete`, { method: "PATCH" });
+    if (res.ok) {
+      setJobActionState({ id: jobId, status: "success", label: "Oferta completada" });
+      setTimeout(async () => {
+        setJobActionState(null);
+        await fetchJobs();
+      }, 1500);
+    } else {
+      setJobActionState(null);
+    }
+  };
+
+  const updateApplicationStatus = async (applicationId: string, status: string) => {
+    setAppActionState({ id: applicationId, status: "loading", label: "" });
+    const res = await fetch(`/api/applications/${applicationId}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    if (res.ok && selectedJob) {
+      const label = status === "APPROVED" ? "Postulación aprobada" : "Postulación rechazada";
+      setAppActionState({ id: applicationId, status: "success", label });
+      setTimeout(async () => {
+        setAppActionState(null);
+        await fetchApplications(selectedJob);
+      }, 1500);
+    } else {
+      setAppActionState(null);
+    }
+  };
+
+  const filteredApplications = applications.filter((a) => a.origin === activeTab);
+  const selectedJobData = jobs.find((j) => j.id === selectedJob);
+  const hiredWorkers = applications.filter((a) => a.status === "APPROVED");
+  const visibleJobs = jobs.filter((j) => jobFilter === "ALL" || j.status === jobFilter);
+
   return (
-  <div className="max-w-7xl mx-auto px-4 py-8">
-    <Link
-      href="/company/dashboard"
-      className="flex items-center gap-1.5 text-sm text-jm-text-secondary hover:text-jm-text transition-colors cursor-pointer mb-6"
-    >
-      <IconArrowLeft size={16} />
-      Volver
-    </Link>
-        <h1 className="text-xl font-medium text-jm-text mb-6">Buscar trabajadores</h1>
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="flex flex-col sm:flex-row sm:justify-end gap-3 mb-6">
+        <Link
+          href="/company/workers"
+          className="flex items-center justify-center gap-1.5 border border-jm-border-soft text-jm-text-secondary px-4 py-2 rounded-lg text-sm font-medium hover:border-jm-gray transition-colors cursor-pointer"
+        >
+          <IconUsers size={16} />
+          Buscar trabajadores
+        </Link>
+        <Link
+          href="/company/jobs/new"
+          className="flex items-center justify-center gap-1.5 bg-jm-magenta text-white px-4 py-2 rounded-lg text-sm font-medium shadow-[0_0_0_0_rgba(212,83,126,0)] hover:shadow-[0_0_20px_2px_rgba(212,83,126,0.45)] hover:bg-jm-magenta-light hover:text-jm-magenta-bg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 cursor-pointer"
+        >
+          <IconPlus size={16} />
+          Nueva oferta
+        </Link>
+      </div>
 
-        {jobs.length === 0 && !loading && (
-          <div className="bg-jm-cyan-bg border border-jm-cyan rounded-lg p-4 mb-6">
-            <p className="text-sm text-jm-cyan-light">
-              No tenés ofertas activas. Creá una oferta primero para poder indicar trabajadores.
-            </p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Panel izquierdo — ofertas */}
+        <div className="md:col-span-1">
+          <h2 className="text-lg font-medium text-jm-text mb-4">Tus ofertas</h2>
+          <div className="flex gap-2 mb-4 flex-wrap">
+            {(["ALL", "ACTIVE", "BLOCKED", "COMPLETED", "DELETED"] as const).map((s) => (
+              <button key={s} onClick={() => setJobFilter(s)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  jobFilter === s ? "bg-jm-magenta text-white" : "bg-jm-card text-jm-text-secondary border border-jm-border"
+                }`}>
+                {s === "ALL" && "Todas"}{s === "ACTIVE" && "Activas"}
+                {s === "BLOCKED" && "Bloqueadas"}{s === "COMPLETED" && "Completadas"}{s === "DELETED" && "Eliminadas"}
+              </button>
+            ))}
           </div>
-        )}
 
-        {/* Filtros — 1 columna en mobile, 2 desde sm para no apretar los selects */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 max-w-md">
-          <select
-            value={filters.categoryId}
-            onChange={(e) => setFilters({ ...filters, categoryId: e.target.value })}
-            className="bg-jm-card border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer"
-          >
-            <option value="">Todas las categorías</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-
-          <select
-            value={filters.department}
-            onChange={(e) => setFilters({ ...filters, department: e.target.value })}
-            className="bg-jm-card border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer"
-          >
-            <option value="">Todos los departamentos</option>
-            {Object.entries(DEPARTMENT_LABELS).map(([k, v]) => (
-              <option key={k} value={k}>{v}</option>
-            ))}
-          </select>
+          {loadingJobs ? (
+            <p className="text-jm-text-tertiary text-sm">Cargando...</p>
+          ) : visibleJobs.length === 0 ? (
+            <div className="bg-jm-card border border-jm-border rounded-lg p-6 text-center">
+              <p className="text-jm-text-tertiary text-sm mb-4">No tenés ofertas en este estado.</p>
+              {jobFilter === "ACTIVE" && (
+                <Link href="/company/jobs/new" className="text-jm-cyan-light text-sm hover:underline cursor-pointer">
+                  Crear tu primera oferta
+                </Link>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {visibleJobs.map((job) => (
+                <div key={job.id} className="bg-jm-card rounded-lg p-4 transition-colors"
+                  style={{ border: selectedJob === job.id ? "1px solid #993556" : "1px solid #232229" }}>
+                  <button onClick={() => handleSelectJob(job.id, job.status)} className="text-left w-full cursor-pointer">
+                    <div className="flex justify-between items-start gap-2">
+                      <p className="font-medium text-sm text-jm-text">{job.title}</p>
+                      {job.status !== "ACTIVE" && (
+                        <Badge variant={job.status === "BLOCKED" ? "red" : job.status === "COMPLETED" ? "cyan" : "gray"}>
+                          {job.status === "BLOCKED" && "Bloqueada"}
+                          {job.status === "COMPLETED" && "Completada"}
+                          {job.status === "DELETED" && "Eliminada"}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-jm-text-secondary mt-1">{job.category.name} · {MODALITY_LABELS[job.modality]}</p>
+                    <p className="text-xs text-jm-text-tertiary mt-1">{DEPARTMENT_LABELS[job.department]}</p>
+                  </button>
+                  {job.status === "ACTIVE" && (
+                    <div className="flex gap-3 mt-3 flex-wrap items-center">
+                      {jobActionState?.id === job.id ? (
+                        <FeedbackChip state={jobActionState} />
+                      ) : (
+                        <>
+                          <Link href={`/company/jobs/${job.id}/edit`} className="text-xs text-jm-cyan-light hover:underline cursor-pointer">
+                            Editar
+                          </Link>
+                          <button
+                            onClick={() => handleCompleteJob(job.id)}
+                            disabled={!!jobActionState}
+                            className="text-xs text-jm-green-light hover:underline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Marcar completada
+                          </button>
+                          <button
+                            onClick={() => handleDeleteJob(job.id)}
+                            disabled={!!jobActionState}
+                            className="text-xs text-jm-red-light hover:underline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Eliminar
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {loading ? (
-          <p className="text-jm-text-tertiary text-sm">Cargando trabajadores...</p>
-        ) : workers.length === 0 ? (
-          <p className="text-jm-text-tertiary text-sm">No hay trabajadores disponibles.</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {workers.map((worker) => (
-              <div
-                key={worker.id}
-                className="bg-jm-card border border-jm-border rounded-lg p-5"
-              >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <p className="font-medium text-jm-text">
-                      {worker.firstName} {worker.lastName}
-                    </p>
-                    <p className="text-sm text-jm-text-secondary mt-0.5">
-                      {DEPARTMENT_LABELS[worker.department]}
-                    </p>
-                    <p className="text-xs text-jm-cyan-light mt-1">
-                      {AVAILABILITY_LABELS[worker.availability]}
-                    </p>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {worker.categories.map((c) => (
-                        <Badge key={c.category.name} variant="cyan">
-                          {c.category.name}
-                        </Badge>
-                      ))}
-                    </div>
-                    {worker.description && (
-                      <p className="text-sm text-jm-text-secondary mt-2 line-clamp-2">
-                        {worker.description}
-                      </p>
-                    )}
-                    {worker.cvUrl && (
-     <a                 
-    href={`https://docs.google.com/viewer?url=${encodeURIComponent(worker.cvUrl)}&embedded=false`}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="flex items-center gap-1 text-jm-cyan-light text-xs hover:underline mt-2 cursor-pointer"
-  >
-    <IconFileText size={13} />
-    Ver CV
-  </a>
-)}
-                  </div>
+        {/* Panel derecho — detalle */}
+        <div className="md:col-span-2">
+          {!selectedJob ? (
+            <div className="bg-jm-card border border-jm-border rounded-lg p-8 text-center">
+              <p className="text-jm-text-tertiary text-sm">Seleccioná una oferta para ver el detalle.</p>
+            </div>
+          ) : selectedJobData?.status === "COMPLETED" ? (
+            <div className="bg-jm-card border border-jm-border rounded-2xl p-6">
+              <h2 className="text-lg font-medium text-jm-text mb-4">{selectedJobData.title}</h2>
+              {selectedJobData.completedAt && (
+                <div className="flex items-center gap-2 text-jm-cyan-light text-sm mb-4">
+                  <IconCalendar size={16} />
+                  Completada el {formatDateTime(selectedJobData.completedAt)}
                 </div>
-
-                {jobs.length > 0 && (
-                  <div className="mt-4 flex flex-col gap-2">
-                    <select
-                      value={selectedJob[worker.id] || ""}
-                      onChange={(e) =>
-                        setSelectedJob({ ...selectedJob, [worker.id]: e.target.value })
-                      }
-                      className="bg-jm-card-hover border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer"
-                    >
-                      <option value="">Seleccioná una oferta</option>
-                      {jobs.map((job) => (
-                        <option key={job.id} value={job.id}>
-                          {job.title}
-                        </option>
-                      ))}
-                    </select>
-
-                    {error[worker.id] && (
-                      <p className="text-jm-red-light text-xs">{error[worker.id]}</p>
-                    )}
-
-                    <Button
-                      fullWidth
-                      variant={
-                        indicated.includes(`${worker.id}-${selectedJob[worker.id]}`)
-                          ? "disabled"
-                          : "primary"
-                      }
-                      disabled={
-                        indicating === worker.id ||
-                        indicated.includes(`${worker.id}-${selectedJob[worker.id]}`)
-                      }
-                      onClick={() => handleIndicate(worker.id)}
-                    >
-                      {indicating === worker.id
-                        ? "Indicando..."
-                        : indicated.includes(`${worker.id}-${selectedJob[worker.id]}`)
-                        ? "Ya indicado"
-                        : "Indicar para esta oferta"}
-                    </Button>
-                  </div>
-                )}
+              )}
+              <p className="text-sm font-medium text-jm-text-secondary mb-2">Trabajadores contratados</p>
+              {loadingApps ? (
+                <p className="text-jm-text-tertiary text-sm">Cargando...</p>
+              ) : hiredWorkers.length === 0 ? (
+                <p className="text-jm-text-tertiary text-sm">No quedó registrado ningún trabajador con postulación aprobada en esta oferta.</p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {hiredWorkers.map((app) => (
+                    <div key={app.id} className="flex items-center gap-2 bg-jm-green-bg border border-jm-green rounded-lg px-3 py-2">
+                      <IconUserCheck size={16} className="text-jm-green-light" />
+                      <span className="text-sm text-jm-text">{app.worker.firstName} {app.worker.lastName}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : selectedJobData?.status === "BLOCKED" ? (
+            <div className="bg-jm-card border border-jm-red rounded-2xl p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <IconAlertTriangle size={20} className="text-jm-red-light" />
+                <h2 className="text-lg font-medium text-jm-text">{selectedJobData.title}</h2>
               </div>
-            ))}
-          </div>
-        )}
+              {selectedJobData.observations.length === 0 ? (
+                <p className="text-jm-text-tertiary text-sm">No hay un motivo registrado para este bloqueo.</p>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {selectedJobData.observations.map((obs) => (
+                    <div key={obs.id} className="bg-jm-red-bg border border-jm-red rounded-lg p-4">
+                      <p className="text-sm text-jm-text mb-2">{obs.message}</p>
+                      <p className="text-xs text-jm-text-tertiary">{formatDateTime(obs.createdAt)} · Bloqueada por el Administrador</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : selectedJobData?.status === "DELETED" ? (
+            <div className="bg-jm-card border border-jm-border rounded-lg p-8 text-center">
+              <p className="text-jm-text-tertiary text-sm">Esta oferta fue eliminada y ya no está disponible.</p>
+            </div>
+          ) : (
+            <>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-medium text-jm-text">{selectedJobData?.title}</h2>
+              </div>
+              <div className="flex gap-2 mb-4 flex-wrap">
+                <button onClick={() => setActiveTab("SELF")}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                    activeTab === "SELF" ? "bg-jm-magenta text-white" : "bg-jm-card text-jm-text-secondary border border-jm-border"
+                  }`}>
+                  Postulaciones recibidas
+                </button>
+                <button onClick={() => setActiveTab("INDICATED")}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                    activeTab === "INDICATED" ? "bg-jm-magenta text-white" : "bg-jm-card text-jm-text-secondary border border-jm-border"
+                  }`}>
+                  Indicados por mí
+                </button>
+              </div>
+
+              {loadingApps ? (
+                <p className="text-jm-text-tertiary text-sm">Cargando...</p>
+              ) : filteredApplications.length === 0 ? (
+                <div className="bg-jm-card border border-jm-border rounded-lg p-6 text-center">
+                  <p className="text-jm-text-tertiary text-sm">
+                    {activeTab === "SELF" ? "No hay postulaciones para esta oferta todavía." : "No indicaste trabajadores para esta oferta todavía."}
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {filteredApplications.map((app) => (
+                    <div key={app.id} className="bg-jm-card border border-jm-border rounded-lg p-4">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                        <div>
+                          <p className="font-medium text-jm-text">{app.worker.firstName} {app.worker.lastName}</p>
+                          <p className="text-sm text-jm-text-secondary mt-0.5">
+                            {DEPARTMENT_LABELS[app.worker.department]} · {AVAILABILITY_LABELS[app.worker.availability]}
+                          </p>
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {app.worker.categories.map((c) => (
+                              <Badge key={c.category.name} variant="cyan">{c.category.name}</Badge>
+                            ))}
+                          </div>
+                          {app.worker.cvUrl && (
+                            <a href={`https://docs.google.com/viewer?url=${encodeURIComponent(app.worker.cvUrl)}&embedded=false`}
+                              target="_blank" rel="noopener noreferrer"
+                              className="flex items-center gap-1 text-jm-cyan-light text-xs hover:underline mt-2 cursor-pointer">
+                              <IconFileText size={13} />Ver CV
+                            </a>
+                          )}
+                        </div>
+                        <div className="flex flex-row sm:flex-col items-start sm:items-end gap-2 flex-wrap">
+                          <Badge variant={app.status === "PENDING" ? "cyan" : app.status === "APPROVED" ? "green" : "red"}>
+                            {app.status === "PENDING" && "Pendiente"}
+                            {app.status === "APPROVED" && (activeTab === "INDICATED" ? "Aceptada por el trabajador" : "Aprobado")}
+                            {app.status === "REJECTED" && (activeTab === "INDICATED" ? "Rechazada por el trabajador" : "Rechazado")}
+                          </Badge>
+                          {app.status === "PENDING" && activeTab === "SELF" && (
+                            appActionState?.id === app.id ? (
+                              <FeedbackChip state={appActionState} />
+                            ) : (
+                              <div className="flex gap-2">
+                                <Button variant="approve" disabled={!!appActionState}
+                                  onClick={() => updateApplicationStatus(app.id, "APPROVED")}>
+                                  Aprobar
+                                </Button>
+                                <Button variant="reject" disabled={!!appActionState}
+                                  onClick={() => updateApplicationStatus(app.id, "REJECTED")}>
+                                  Rechazar
+                                </Button>
+                              </div>
+                            )
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
+    </div>
   );
 }
