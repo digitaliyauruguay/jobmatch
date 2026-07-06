@@ -106,8 +106,9 @@ export async function middleware(req: NextRequest) {
   }
 
   // Redirigir usuarios ya logueados fuera de páginas de auth
+  // Solo si el status es ACTIVE — si está bloqueado/inactivo debe poder ver el login
   if (pathname === "/" || pathname.startsWith("/login") || pathname.startsWith("/register")) {
-    if (token) {
+    if (token && token.status === "ACTIVE") {
       if (token.role === "WORKER") return NextResponse.redirect(new URL("/worker/dashboard", req.url));
       if (token.role === "COMPANY") return NextResponse.redirect(new URL("/company/dashboard", req.url));
       if (token.role === "ADMIN") return NextResponse.redirect(new URL("/admin/dashboard", req.url));
