@@ -1,88 +1,76 @@
 /*
- * Archivo: src/app/api/applications/[id]/status/route.ts
- * Qué hace: Permite a una empresa aprobar o rechazar una postulación.
- * PATCH - actualiza el estado a APPROVED o REJECTED. En ambos casos
- * notifica al trabajador solo con notificación interna — el trabajador
- * lo ve en su dashboard sin necesidad de email.
- * Solo la empresa dueña de la oferta puede modificar el estado.
+ * Archivo: src/lib/emails.ts
+ * Qué hace: Define los templates HTML de los emails que envía
+ * la plataforma. Solo se mantienen los eventos imprescindibles:
+ * aprobación de cuenta, bloqueo de cuenta, bloqueo de oferta,
+ * y recuperación de contraseña. Los demás eventos (registro recibido,
+ * nueva postulación, postulación aprobada/rechazada, indicación)
+ * se manejan solo con notificaciones internas para preservar el
+ * cupo diario de emails de Brevo.
  */
 
-import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
-import { prisma } from "@/lib/prisma";
+export const emailUserApproved = (firstName: string) => ({
+  subject: "Tu cuenta fue aprobada — JobMatch Uruguay",
+  html: `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #993556;">¡Bienvenido a JobMatch Uruguay!</h2>
+      <p>Hola ${firstName},</p>
+      <p>Tu cuenta fue aprobada. Ya podés ingresar a la plataforma y empezar a usar todos los servicios.</p>
+      <a href="${process.env.NEXTAUTH_URL}/login"
+        style="display: inline-block; background: #993556; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 16px;">
+        Ingresar a JobMatch
+      </a>
+      <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">
+        Si tenés alguna consulta podés responder este email.
+      </p>
+    </div>
+  `,
+});
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+export const emailUserBlocked = (firstName: string, reason?: string) => ({
+  subject: "Tu cuenta fue bloqueada — JobMatch Uruguay",
+  html: `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #dc2626;">Tu cuenta fue bloqueada</h2>
+      <p>Hola ${firstName},</p>
+      <p>Tu cuenta en JobMatch Uruguay fue bloqueada temporalmente.</p>
+      ${reason ? `<p><strong>Motivo:</strong> ${reason}</p>` : ""}
+      <p>Si creés que esto es un error, respondé este email para contactar al equipo.</p>
+    </div>
+  `,
+});
 
-    if (!token || token.role !== "COMPANY") {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+export const emailJobBlocked = (
+  companyName: string,
+  jobTitle: string,
+  reason?: string
+) => ({
+  subject: `Tu oferta fue bloqueada — JobMatch Uruguay`,
+  html: `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #dc2626;">Tu oferta fue bloqueada</h2>
+      <p>Hola ${companyName},</p>
+      <p>Tu oferta <strong>"${jobTitle}"</strong> fue bloqueada por el administrador.</p>
+      ${reason ? `<p><strong>Motivo:</strong> ${reason}</p>` : ""}
+      <p>Revisá el contenido y contactá al equipo si tenés dudas.</p>
+    </div>
+  `,
+});
 
-    const company = await prisma.companyProfile.findUnique({
-      where: { userId: token.id as string },
-    });
-
-    if (!company) {
-      return NextResponse.json(
-        { error: "No tenés un perfil de empresa" },
-        { status: 404 }
-      );
-    }
-
-    const { status } = await req.json();
-
-    if (!["APPROVED", "REJECTED"].includes(status)) {
-      return NextResponse.json({ error: "Estado inválido" }, { status: 400 });
-    }
-
-    const application = await prisma.application.findUnique({
-      where: { id },
-      include: {
-        job: {
-          include: { company: true },
-        },
-        worker: {
-          include: { user: true },
-        },
-      },
-    });
-
-    if (!application || application.job.companyId !== company.id) {
-      return NextResponse.json(
-        { error: "La postulación no existe o no te pertenece" },
-        { status: 404 }
-      );
-    }
-
-    const updated = await prisma.application.update({
-      where: { id },
-      data: { status },
-    });
-
-    // Solo notificación interna — el trabajador lo ve en su dashboard
-    const notifMessages: Record<string, string> = {
-      APPROVED: `Tu postulación para "${application.job.title}" fue aprobada. La empresa se pondrá en contacto con vos.`,
-      REJECTED: `Tu postulación para "${application.job.title}" no fue seleccionada esta vez.`,
-    };
-
-    await prisma.notification.create({
-      data: {
-        userId: application.worker.user.id,
-        message: notifMessages[status],
-      },
-    });
-
-    return NextResponse.json(updated);
-  } catch (error) {
-    console.error("Error al actualizar postulación:", error);
-    return NextResponse.json(
-      { error: "Error interno del servidor" },
-      { status: 500 }
-    );
-  }
-}
+export const emailPasswordReset = (code: string) => ({
+  subject: "Código para recuperar tu contraseña — JobMatch Uruguay",
+  html: `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #993556;">Recuperá tu contraseña</h2>
+      <p>Recibimos una solicitud para restablecer tu contraseña en JobMatch Uruguay.</p>
+      <p>Usá este código para continuar:</p>
+      <div style="background: #f3f4f6; padding: 16px 24px; border-radius: 8px; text-align: center; margin: 16px 0;">
+        <span style="font-size: 28px; font-weight: bold; letter-spacing: 4px; color: #993556;">${code}</span>
+      </div>
+      <p>Este código vence en 30 minutos.</p>
+      <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">
+        Si no solicitaste este cambio, podés ignorar este email de forma segura.
+      </p>
+    </div>
+  `,
+});
