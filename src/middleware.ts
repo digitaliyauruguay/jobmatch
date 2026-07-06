@@ -79,7 +79,9 @@ export async function middleware(req: NextRequest) {
     if (!token || token.role !== "WORKER") {
       return NextResponse.redirect(new URL("/login", req.url));
     }
-    if (token.status !== "ACTIVE") {
+    // Solo forzar logout si el status es explícitamente BLOCKED o INACTIVE
+    // Si es undefined/desconocido, dejar pasar para no romper sesiones válidas
+    if (token.status === "BLOCKED" || token.status === "INACTIVE") {
       const response = NextResponse.redirect(new URL("/login", req.url));
       response.cookies.delete("next-auth.session-token");
       response.cookies.delete("__Secure-next-auth.session-token");
@@ -91,7 +93,7 @@ export async function middleware(req: NextRequest) {
     if (!token || token.role !== "COMPANY") {
       return NextResponse.redirect(new URL("/login", req.url));
     }
-    if (token.status !== "ACTIVE") {
+    if (token.status === "BLOCKED" || token.status === "INACTIVE") {
       const response = NextResponse.redirect(new URL("/login", req.url));
       response.cookies.delete("next-auth.session-token");
       response.cookies.delete("__Secure-next-auth.session-token");
