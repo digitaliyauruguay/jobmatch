@@ -41,9 +41,9 @@ type User = {
 type ActionState = { userId: string; status: "loading" | "success"; label: string } | null;
 
 const ACTION_LABELS: Record<string, string> = {
-  ACTIVE: "Aprobado correctamente",
-  INACTIVE: "Cuenta desactivada",
-  BLOCKED: "Cuenta bloqueada",
+  ACTIVE: "Acción realizada correctamente",
+  INACTIVE: "Acción realizada correctamente",
+  BLOCKED: "Acción realizada correctamente",
 };
 
 export default function AdminUsersPage() {
