@@ -3,6 +3,8 @@
  * Qué hace: Maneja el registro completo de nuevos usuarios en un solo paso.
  * Crea el usuario y su perfil (trabajador o empresa) en la misma operación.
  * El usuario queda en estado PENDING hasta que el admin lo apruebe.
+ * Al registrarse: notifica al admin por email y notificación interna.
+ * No se envía email al usuario — la página /pending ya informa el estado.
  * No requiere autenticación previa.
  */
 
@@ -10,7 +12,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { sendMail } from "@/lib/mail";
-import { emailRegistrationReceived } from "@/lib/emails";
 
 async function notifyAdmin(roleLabel: string, name: string, email: string) {
   const admins = await prisma.user.findMany({ where: { role: "ADMIN" } });
@@ -43,19 +44,19 @@ export async function POST(req: NextRequest) {
     const { email, password, role, profile } = await req.json();
 
     if (!email || !password || !role || !profile) {
-  return NextResponse.json(
-    { error: "Faltan datos requeridos" },
-    { status: 400 }
-  );
-}
+      return NextResponse.json(
+        { error: "Faltan datos requeridos" },
+        { status: 400 }
+      );
+    }
 
-const emailRegex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/;
-if (!emailRegex.test(email)) {
-  return NextResponse.json(
-    { error: "El formato del email no es válido" },
-    { status: 400 }
-  );
-}
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        { error: "El formato del email no es válido" },
+        { status: 400 }
+      );
+    }
 
     if (role !== "WORKER" && role !== "COMPANY") {
       return NextResponse.json({ error: "Rol inválido" }, { status: 400 });
@@ -72,7 +73,6 @@ if (!emailRegex.test(email)) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Crear usuario y perfil en una sola operación
     if (role === "WORKER") {
       const { firstName, lastName, department, phone, description, availability, photo, cvUrl, categoryIds } = profile;
 
@@ -106,12 +106,9 @@ if (!emailRegex.test(email)) {
           },
         },
       });
-      await notifyAdmin("trabajador", `${firstName} ${lastName}`, email);
 
-      await sendMail({
-        to: email,
-        ...emailRegistrationReceived(firstName),
-});
+      // Solo notifica al admin — el usuario ya ve /pending
+      await notifyAdmin("trabajador", `${firstName} ${lastName}`, email);
     }
 
     if (role === "COMPANY") {
@@ -144,12 +141,9 @@ if (!emailRegex.test(email)) {
           },
         },
       });
-      await notifyAdmin("empresa", name, email);
 
-      await sendMail({
-        to: email,
-        ...emailRegistrationReceived(name),
-});
+      // Solo notifica al admin — el usuario ya ve /pending
+      await notifyAdmin("empresa", name, email);
     }
 
     return NextResponse.json(

@@ -2,15 +2,14 @@
  * Archivo: src/app/api/applications/indicate/route.ts
  * Qué hace: Permite a una empresa indicar proactivamente un trabajador
  * para una de sus ofertas publicadas (origin: INDICATED).
- * Notifica al trabajador con notificación interna y email.
+ * Notifica al trabajador solo con notificación interna — el trabajador
+ * lo ve en su dashboard sin necesidad de email.
  * Solo accesible por empresas activas.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
-import { sendMail } from "@/lib/mail";
-import { emailIndicated } from "@/lib/emails";
 
 export async function POST(req: NextRequest) {
   try {
@@ -83,21 +82,13 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Notificación interna al trabajador
+    // Solo notificación interna — el trabajador lo ve en su dashboard
     await prisma.notification.create({
       data: {
         userId: worker.user.id,
         message: `La empresa "${company.name}" te indicó para la oferta "${job.title}".`,
       },
     });
-
-    // Email al trabajador
-    const emailData = emailIndicated(
-      worker.firstName,
-      job.title,
-      company.name
-    );
-    await sendMail({ to: worker.user.email, ...emailData });
 
     return NextResponse.json(application, { status: 201 });
   } catch (error) {

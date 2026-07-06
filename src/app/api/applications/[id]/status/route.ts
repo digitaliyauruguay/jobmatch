@@ -1,16 +1,15 @@
 /*
  * Archivo: src/app/api/applications/[id]/status/route.ts
  * Qué hace: Permite a una empresa aprobar o rechazar una postulación.
- * PATCH - actualiza el estado a APPROVED o REJECTED, notifica al
- * trabajador con notificación interna y email.
+ * PATCH - actualiza el estado a APPROVED o REJECTED. En ambos casos
+ * notifica al trabajador solo con notificación interna — el trabajador
+ * lo ve en su dashboard sin necesidad de email.
  * Solo la empresa dueña de la oferta puede modificar el estado.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
-import { sendMail } from "@/lib/mail";
-import { emailApplicationApproved, emailApplicationRejected } from "@/lib/emails";
 
 export async function PATCH(
   req: NextRequest,
@@ -45,9 +44,7 @@ export async function PATCH(
       where: { id },
       include: {
         job: {
-          include: {
-            company: true,
-          },
+          include: { company: true },
         },
         worker: {
           include: { user: true },
@@ -67,7 +64,7 @@ export async function PATCH(
       data: { status },
     });
 
-    // Notificación interna al trabajador
+    // Solo notificación interna — el trabajador lo ve en su dashboard
     const notifMessages: Record<string, string> = {
       APPROVED: `Tu postulación para "${application.job.title}" fue aprobada. La empresa se pondrá en contacto con vos.`,
       REJECTED: `Tu postulación para "${application.job.title}" no fue seleccionada esta vez.`,
@@ -79,17 +76,6 @@ export async function PATCH(
         message: notifMessages[status],
       },
     });
-
-    // Email al trabajador
-    if (status === "APPROVED") {
-  const emailData = emailApplicationApproved(
-    application.worker.firstName,
-    application.job.title,
-    application.job.company.name
-  );
-  await sendMail({ to: application.worker.user.email, ...emailData });
-}
-// REJECTED: solo notificación interna, sin email
 
     return NextResponse.json(updated);
   } catch (error) {
