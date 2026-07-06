@@ -14,7 +14,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import Link from "next/link";
 import Badge from "@/components/ui/Badge";
 import { IconArrowLeft, IconCheck, IconLoader2 } from "@tabler/icons-react";
@@ -314,8 +314,8 @@ export default function AdminUsersPage() {
               </thead>
               <tbody className="divide-y divide-jm-border">
                 {users.map((user) => (
-                  <>
-                    <tr key={user.id} className="hover:bg-jm-card-hover transition-colors">
+                  <Fragment key={user.id}>
+                    <tr className="hover:bg-jm-card-hover transition-colors">
                       <td className="px-4 py-3 font-medium">{renderName(user)}</td>
                       <td className="px-4 py-3 text-jm-text-secondary">{user.email}</td>
                       <td className="px-4 py-3">
@@ -327,13 +327,13 @@ export default function AdminUsersPage() {
                       <td className="px-4 py-3">{renderActions(user)}</td>
                     </tr>
                     {observationUserId === user.id && (
-                      <tr key={`obs-${user.id}`}>
+                      <tr>
                         <td colSpan={5} className="px-4 py-3">
                           {renderObservationInput(user)}
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 ))}
               </tbody>
             </table>

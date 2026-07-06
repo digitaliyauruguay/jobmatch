@@ -10,7 +10,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import Link from "next/link";
 import { IconArrowLeft, IconCheck, IconLoader2 } from "@tabler/icons-react";
 
@@ -213,8 +213,8 @@ export default function AdminJobsPage() {
               </thead>
               <tbody className="divide-y divide-jm-border">
                 {jobs.map((job) => (
-                  <>
-                    <tr key={job.id} className="hover:bg-jm-card-hover transition-colors">
+                  <Fragment key={job.id}>
+                    <tr className="hover:bg-jm-card-hover transition-colors">
                       <td className="px-4 py-3 font-medium text-jm-text">{job.title}</td>
                       <td className="px-4 py-3 text-jm-text-secondary">{job.company.name}</td>
                       <td className="px-4 py-3 text-jm-text-secondary">{job.category.name}</td>
@@ -222,11 +222,11 @@ export default function AdminJobsPage() {
                       <td className="px-4 py-3">{renderActions(job)}</td>
                     </tr>
                     {observationJobId === job.id && (
-                      <tr key={`obs-${job.id}`}>
+                      <tr>
                         <td colSpan={5} className="px-4 py-3">{renderObservationInput(job)}</td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 ))}
               </tbody>
             </table>
