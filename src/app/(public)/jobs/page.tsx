@@ -12,7 +12,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Badge from "@/components/ui/Badge";
-import PublicNavbar from "@/components/ui/PublicNavbar";
 
 type Job = {
   id: string;
@@ -73,8 +72,7 @@ export default function PublicJobsPage() {
   useEffect(() => { fetchJobs(); }, [filters]);
 
   return (
-    <main className="min-h-screen bg-jm-black">
-      <PublicNavbar />
+    <main>
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 mb-6">
           <h1 className="text-2xl font-medium text-jm-text">Ofertas de trabajo</h1>
