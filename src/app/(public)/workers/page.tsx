@@ -92,12 +92,12 @@ export default function PublicWorkersPage() {
             <option value="">Cualquier disponibilidad</option>
             {Object.entries(AVAILABILITY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
-          <label className="flex items-center gap-2 cursor-pointer">
+          <label className="flex items-center gap-2 bg-jm-card border border-jm-border rounded-lg px-3 py-2 cursor-pointer hover:border-jm-magenta transition-colors">
           <input
             type="checkbox"
             checked={filters.hasCV === "true"}
             onChange={(e) => setFilters({ ...filters, hasCV: e.target.checked ? "true" : "" })}
-            className="w-4 h-4 accent-jm-magenta cursor-pointer"
+            className="w-4 h-4 accent-jm-magenta cursor-pointer flex-shrink-0"
           />
           <span className="text-sm text-jm-text-secondary">Solo con CV cargado</span>
         </label>
