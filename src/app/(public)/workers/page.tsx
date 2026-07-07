@@ -2,8 +2,9 @@
  * Archivo: src/app/(public)/workers/page.tsx
  * Qué hace: Página pública de trabajadores disponibles con tema oscuro
  * JobMatch. Muestra perfiles básicos sin datos sensibles, con filtros
- * por categoría y departamento. Cualquier intento de ver el perfil
- * completo redirige al registro. Usa PublicNavbar compartida.
+ * por categoría, departamento, disponibilidad y si tienen CV cargado.
+ * Cualquier intento de ver el perfil completo redirige al registro.
+ * Usa PublicNavbar compartida via layout.
  */
 
 "use client";
@@ -11,6 +12,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Badge from "@/components/ui/Badge";
+import { IconFileText } from "@tabler/icons-react";
 
 type Worker = {
   id: string;
@@ -18,6 +20,7 @@ type Worker = {
   department: string;
   availability: string;
   description: string | null;
+  hasCV: boolean;
   categories: { category: { name: string } }[];
 };
 
@@ -40,13 +43,17 @@ export default function PublicWorkersPage() {
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({ categoryId: "", department: "" });
+  const [filters, setFilters] = useState({
+    categoryId: "", department: "", availability: "", hasCV: "",
+  });
 
   const fetchWorkers = async () => {
     setLoading(true);
     const params = new URLSearchParams();
     if (filters.categoryId) params.append("categoryId", filters.categoryId);
     if (filters.department) params.append("department", filters.department);
+    if (filters.availability) params.append("availability", filters.availability);
+    if (filters.hasCV) params.append("hasCV", filters.hasCV);
     const res = await fetch(`/api/workers?${params.toString()}`);
     const data = await res.json();
     setWorkers(data);
@@ -68,7 +75,8 @@ export default function PublicWorkersPage() {
           <p className="text-sm text-jm-text-tertiary">{workers.length} trabajadores</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 max-w-md">
+        {/* Filtros — 1 columna en mobile, 2 desde sm, 4 desde md */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           <select value={filters.categoryId} onChange={(e) => setFilters({ ...filters, categoryId: e.target.value })}
             className="bg-jm-card border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer">
             <option value="">Todas las categorías</option>
@@ -78,6 +86,16 @@ export default function PublicWorkersPage() {
             className="bg-jm-card border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer">
             <option value="">Todos los departamentos</option>
             {Object.entries(DEPARTMENT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
+          <select value={filters.availability} onChange={(e) => setFilters({ ...filters, availability: e.target.value })}
+            className="bg-jm-card border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer">
+            <option value="">Cualquier disponibilidad</option>
+            {Object.entries(AVAILABILITY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
+          <select value={filters.hasCV} onChange={(e) => setFilters({ ...filters, hasCV: e.target.value })}
+            className="bg-jm-card border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer">
+            <option value="">Con o sin CV</option>
+            <option value="true">Con CV cargado</option>
           </select>
         </div>
 
@@ -90,7 +108,14 @@ export default function PublicWorkersPage() {
             {workers.map((worker) => (
               <div key={worker.id} className="bg-jm-card border border-jm-border rounded-lg p-5 flex flex-col justify-between">
                 <div>
-                  <p className="font-medium text-jm-text">{worker.firstName}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-medium text-jm-text">{worker.firstName}</p>
+                    {worker.hasCV && (
+                      <span className="flex items-center gap-1 text-xs text-jm-cyan-light">
+                        <IconFileText size={13} />CV
+                      </span>
+                    )}
+                  </div>
                   <p className="text-sm text-jm-text-secondary mt-1">{DEPARTMENT_LABELS[worker.department]}</p>
                   <p className="text-xs text-jm-cyan-light mt-1">{AVAILABILITY_LABELS[worker.availability]}</p>
                   <div className="flex flex-wrap gap-2 mt-3">
