@@ -2,14 +2,27 @@
  * Archivo: src/app/api/jobs/route.ts
  * Qué hace: Maneja las ofertas de trabajo.
  * GET - lista las ofertas activas con filtros opcionales por categoría,
- * departamento, modalidad y fecha. Es público pero devuelve datos
- * limitados para usuarios no autenticados.
+ * departamento, modalidad y fecha. El filtro de fecha usa UTC-3
+ * (hora de Uruguay) para calcular correctamente "hoy", "última semana"
+ * y "último mes" independientemente del timezone del servidor.
  * POST - crea una nueva oferta. Solo accesible por empresas activas.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
+
+// Retorna el inicio del día de hoy en UTC-3 (hora uruguaya)
+function startOfTodayUY(): Date {
+  const now = new Date();
+  // Convertir a UTC-3: restar 3 horas en ms
+  const UY_OFFSET_MS = -3 * 60 * 60 * 1000;
+  const nowInUY = new Date(now.getTime() + UY_OFFSET_MS);
+  // Medianoche en hora uruguaya
+  nowInUY.setUTCHours(0, 0, 0, 0);
+  // Convertir de vuelta a UTC para comparar con la DB
+  return new Date(nowInUY.getTime() - UY_OFFSET_MS);
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -21,13 +34,12 @@ export async function GET(req: NextRequest) {
 
     let dateFrom: Date | undefined;
     if (dateFilter === "today") {
-      dateFrom = new Date();
-      dateFrom.setHours(0, 0, 0, 0);
+      dateFrom = startOfTodayUY();
     } else if (dateFilter === "week") {
-      dateFrom = new Date();
+      dateFrom = startOfTodayUY();
       dateFrom.setDate(dateFrom.getDate() - 7);
     } else if (dateFilter === "month") {
-      dateFrom = new Date();
+      dateFrom = startOfTodayUY();
       dateFrom.setMonth(dateFrom.getMonth() - 1);
     }
 
