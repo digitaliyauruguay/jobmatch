@@ -206,24 +206,24 @@ export default function WorkerDashboard() {
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-6">
               <select value={filters.categoryId} onChange={(e) => setFilters({ ...filters, categoryId: e.target.value })}
-                className="bg-jm-card border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer">
+                className="bg-jm-card border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta hover:border-jm-magenta transition-colors cursor-pointer">
                 <option value="">Todas las categorías</option>
                 {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
               <select value={filters.department} onChange={(e) => setFilters({ ...filters, department: e.target.value })}
-                className="bg-jm-card border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer">
+                className="bg-jm-card border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta hover:border-jm-magenta transition-colors cursor-pointer">
                 <option value="">Todos los departamentos</option>
                 {Object.entries(DEPARTMENT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
               <select value={filters.modality} onChange={(e) => setFilters({ ...filters, modality: e.target.value })}
-                className="bg-jm-card border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer">
+                className="bg-jm-card border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta hover:border-jm-magenta transition-colors cursor-pointer">
                 <option value="">Todas las modalidades</option>
                 <option value="PRESENTIAL">Presencial</option>
                 <option value="REMOTE">Remoto</option>
                 <option value="HYBRID">Híbrido</option>
               </select>
               <select value={filters.date} onChange={(e) => setFilters({ ...filters, date: e.target.value })}
-                className="bg-jm-card border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer">
+                className="bg-jm-card border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta hover:border-jm-magenta transition-colors cursor-pointer">
                 <option value="">Cualquier fecha</option>
                 <option value="today">Hoy</option>
                 <option value="week">Última semana</option>
