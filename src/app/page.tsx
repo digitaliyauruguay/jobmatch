@@ -1,119 +1,21 @@
 /*
  * Archivo: src/app/page.tsx
  * Qué hace: Página de inicio pública de JobMatch Uruguay con tema
- * oscuro. Navbar flotante con logo animado; en mobile colapsa a un
- * menú hamburguesa para no apretar los links. Hero dividido por
- * audiencia (trabajador/empresa) con CTAs diferenciados, seguido
- * de una sección "Cómo funciona" en 3 pasos.
+ * oscuro. Usa PublicNavbar compartida con /jobs y /workers.
+ * Hero dividido por audiencia (trabajador/empresa) con CTAs
+ * diferenciados, seguido de una sección "Cómo funciona" en 3 pasos.
  */
 
-"use client";
-
-import { useState } from "react";
 import Link from "next/link";
-import {
-  IconBriefcase,
-  IconUserCheck,
-  IconBuildingStore,
-  IconArrowRight,
-  IconMenu2,
-  IconX,
-} from "@tabler/icons-react";
+import PublicNavbar from "@/components/ui/PublicNavbar";
+import { IconUserCheck, IconBuildingStore, IconArrowRight } from "@tabler/icons-react";
 
 export default function HomePage() {
-  const [menuOpen, setMenuOpen] = useState(false);
-
   return (
     <main className="min-h-screen bg-jm-black">
-      {/* Nav flotante */}
-      <div className="sticky top-0 z-40 px-4 pt-4 pb-2 bg-jm-black">
-        <nav className="max-w-7xl mx-auto bg-jm-card/90 backdrop-blur-md border border-jm-border rounded-2xl">
-          <div className="px-5 py-3 flex justify-between items-center">
-            <Link href="/" className="flex items-center gap-2 cursor-pointer group">
-              <IconBriefcase
-                size={22}
-                className="text-jm-magenta-light transition-transform duration-200 group-hover:scale-110 group-hover:rotate-[-6deg]"
-              />
-              <span className="text-lg font-medium text-jm-text transition-colors duration-200 group-hover:text-jm-magenta-light">
-                JobMatch
-              </span>
-            </Link>
+      <PublicNavbar />
 
-            {/* Links — visibles desde sm, ocultos en mobile */}
-            <div className="hidden sm:flex items-center gap-3">
-              <Link
-                href="/jobs"
-                className="text-sm text-jm-text-secondary hover:text-jm-text transition-colors cursor-pointer"
-              >
-                Ofertas
-              </Link>
-              <Link
-                href="/workers"
-                className="text-sm text-jm-text-secondary hover:text-jm-text transition-colors cursor-pointer"
-              >
-                Trabajadores
-              </Link>
-              <Link
-                href="/login"
-                className="bg-jm-cyan text-white px-4 py-2 rounded-lg text-sm font-medium shadow-[0_0_0_0_rgba(45,163,173,0)] hover:shadow-[0_0_20px_2px_rgba(45,163,173,0.45)] hover:bg-jm-cyan-light hover:text-jm-cyan-bg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 cursor-pointer"
-              >
-                Ingresar
-              </Link>
-              <Link
-                href="/register"
-                className="bg-jm-magenta text-white px-4 py-2 rounded-lg text-sm font-medium shadow-[0_0_0_0_rgba(212,83,126,0)] hover:shadow-[0_0_20px_2px_rgba(212,83,126,0.45)] hover:bg-jm-magenta-light hover:text-jm-magenta-bg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 cursor-pointer"
-              >
-                Registrarse
-              </Link>
-            </div>
-
-            {/* Botón hamburguesa — solo en mobile */}
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="sm:hidden text-jm-text-secondary hover:text-jm-text transition-colors cursor-pointer p-1"
-              aria-label="Abrir menú"
-            >
-              {menuOpen ? <IconX size={22} /> : <IconMenu2 size={22} />}
-            </button>
-          </div>
-
-          {/* Panel desplegable — solo en mobile */}
-          {menuOpen && (
-            <div className="sm:hidden flex flex-col gap-1 px-5 pb-4 border-t border-jm-border pt-3">
-              <Link
-                href="/jobs"
-                onClick={() => setMenuOpen(false)}
-                className="text-sm text-jm-text-secondary hover:text-jm-text transition-colors cursor-pointer py-2"
-              >
-                Ofertas
-              </Link>
-              <Link
-                href="/workers"
-                onClick={() => setMenuOpen(false)}
-                className="text-sm text-jm-text-secondary hover:text-jm-text transition-colors cursor-pointer py-2"
-              >
-                Trabajadores
-              </Link>
-              <Link
-                href="/login"
-                onClick={() => setMenuOpen(false)}
-                className="bg-jm-cyan text-white px-4 py-2.5 rounded-lg text-sm font-medium text-center mt-1 cursor-pointer"
-              >
-                Ingresar
-              </Link>
-              <Link
-                href="/register"
-                onClick={() => setMenuOpen(false)}
-                className="bg-jm-magenta text-white px-4 py-2.5 rounded-lg text-sm font-medium text-center mt-1 cursor-pointer"
-              >
-                Registrarse
-              </Link>
-            </div>
-          )}
-        </nav>
-      </div>
-
-      {/* Hero — split por audiencia */}
+      {/* Hero */}
       <div className="max-w-4xl mx-auto px-4 pt-20 pb-12 text-center">
         <h1 className="text-4xl font-semibold text-jm-text mb-3">
           Encontrá tu próximo trabajo en Uruguay
@@ -123,7 +25,6 @@ export default function HomePage() {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-2xl mx-auto">
-          {/* Card trabajador */}
           <Link
             href="/register?role=worker"
             className="flex-1 bg-jm-card border border-jm-border rounded-2xl p-6 text-left hover:border-jm-cyan transition-colors cursor-pointer group"
@@ -141,7 +42,6 @@ export default function HomePage() {
             </span>
           </Link>
 
-          {/* Card empresa */}
           <Link
             href="/register?role=company"
             className="flex-1 bg-jm-card border border-jm-border rounded-2xl p-6 text-left hover:border-jm-magenta transition-colors cursor-pointer group"
