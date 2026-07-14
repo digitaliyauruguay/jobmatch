@@ -78,7 +78,7 @@ export default function WorkerNavbar() {
                 </div>
               )}
               <span className="text-sm text-jm-text-secondary group-hover:text-jm-magenta-light transition-colors">
-                {profile?.firstName || session?.user?.email}
+                {profile?.firstName || ""}
               </span>
             </Link>
             <NotificationBell />
