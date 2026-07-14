@@ -183,6 +183,7 @@ export default function EditCompanyProfilePage() {
           label="Logo de la empresa"
           currentUrl={form.logo}
           onUpload={(url) => setForm({ ...form, logo: url })}
+          onRemove={() => setForm({ ...form, logo: "" })}
         />
 
         <div className="flex flex-col gap-1">

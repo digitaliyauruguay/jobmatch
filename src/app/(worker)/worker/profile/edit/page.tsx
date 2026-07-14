@@ -200,6 +200,7 @@ export default function EditWorkerProfilePage() {
           label="Foto de perfil"
           currentUrl={form.photo}
           onUpload={(url) => setForm({ ...form, photo: url })}
+          onRemove={() => setForm({ ...form, photo: "" })}
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -260,6 +261,7 @@ export default function EditWorkerProfilePage() {
           label="CV en PDF (opcional)"
           currentUrl={form.cvUrl}
           onUpload={(url) => setForm({ ...form, cvUrl: url })}
+          onRemove={() => setForm({ ...form, cvUrl: "" })}
         />
 
         <div className="flex flex-col gap-2">
