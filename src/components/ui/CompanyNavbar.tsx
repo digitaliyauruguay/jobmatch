@@ -77,7 +77,7 @@ export default function CompanyNavbar() {
                 </div>
               )}
               <span className="text-sm text-jm-text-secondary group-hover:text-jm-magenta-light transition-colors">
-                {profile?.name || session?.user?.email}
+                {profile?.name || ""}
               </span>
             </Link>
             <NotificationBell />
