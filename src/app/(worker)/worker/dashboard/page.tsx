@@ -10,7 +10,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import {
@@ -72,6 +72,12 @@ export default function WorkerDashboard() {
   const [loadingJobs, setLoadingJobs] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
   const [filters, setFilters] = useState({ categoryId: "", department: "", modality: "", date: "" });
+  const filtersRef = useRef(filters);
+
+  // Mantener filtersRef sincronizado con el estado actual de filters
+  useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [loadingApps, setLoadingApps] = useState(false);
   const [appTab, setAppTab] = useState<"SELF" | "INDICATED">("SELF");
@@ -81,11 +87,12 @@ export default function WorkerDashboard() {
 
   const fetchJobs = async () => {
     setLoadingJobs(true);
+    const currentFilters = filtersRef.current;
     const params = new URLSearchParams();
-    if (filters.categoryId) params.append("categoryId", filters.categoryId);
-    if (filters.department) params.append("department", filters.department);
-    if (filters.modality) params.append("modality", filters.modality);
-    if (filters.date) params.append("date", filters.date);
+    if (currentFilters.categoryId) params.append("categoryId", currentFilters.categoryId);
+    if (currentFilters.department) params.append("department", currentFilters.department);
+    if (currentFilters.modality) params.append("modality", currentFilters.modality);
+    if (currentFilters.date) params.append("date", currentFilters.date);
     const res = await fetch(`/api/jobs?${params.toString()}`);
     const data = await res.json();
     setJobs(data);
