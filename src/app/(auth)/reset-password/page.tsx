@@ -28,6 +28,13 @@ function ResetPasswordContent() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<Message>(null);
 
+  // Si no viene ?email= en la URL, redirigir a /forgot-password
+  useEffect(() => {
+    if (!searchParams.get("email")) {
+      router.replace("/forgot-password");
+    }
+  }, []);
+
   useEffect(() => {
     if (!message) return;
     const timer = setTimeout(() => setMessage(null), 4000);
