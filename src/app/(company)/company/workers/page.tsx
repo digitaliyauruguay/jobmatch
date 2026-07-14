@@ -1,9 +1,11 @@
 /*
  * Archivo: src/app/(company)/company/workers/page.tsx
  * Qué hace: Página para que la empresa busque trabajadores disponibles
- * y los indique para una de sus ofertas publicadas. Filtros por categoría,
- * departamento, disponibilidad y si tienen CV cargado. Feedback inline
- * en el botón de indicar. La navbar la provee el layout compartido.
+ * y los indique para una de sus ofertas publicadas. El estado de
+ * "Ya indicado" se trackea por combinación workerId+jobId, así al
+ * cambiar la oferta seleccionada el botón se actualiza correctamente.
+ * Filtros por categoría, departamento, disponibilidad y CV.
+ * La navbar la provee el layout compartido.
  */
 
 "use client";
@@ -27,7 +29,7 @@ type Worker = {
 
 type Job = { id: string; title: string };
 type Category = { id: string; name: string };
-type IndicateState = { [workerId: string]: "idle" | "loading" | "success" | "indicated" };
+type IndicateState = { [workerId: string]: "idle" | "loading" | "success" };
 
 const AVAILABILITY_LABELS: Record<string, string> = {
   IMMEDIATE: "Disponible de inmediato", ONE_WEEK: "En una semana",
@@ -48,6 +50,7 @@ export default function CompanyWorkersPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [indicateState, setIndicateState] = useState<IndicateState>({});
+  const [indicated, setIndicated] = useState<Set<string>>(new Set());
   const [selectedJob, setSelectedJob] = useState<Record<string, string>>({});
   const [error, setError] = useState<Record<string, string>>({});
   const [filters, setFilters] = useState({
@@ -90,6 +93,10 @@ export default function CompanyWorkersPage() {
       setError({ ...error, [workerId]: "Seleccioná una oferta primero" });
       return;
     }
+
+    const key = `${workerId}-${jobId}`;
+    if (indicated.has(key)) return;
+
     setIndicateState((prev) => ({ ...prev, [workerId]: "loading" }));
     setError({ ...error, [workerId]: "" });
 
@@ -102,15 +109,26 @@ export default function CompanyWorkersPage() {
 
     if (res.ok) {
       setIndicateState((prev) => ({ ...prev, [workerId]: "success" }));
-      setTimeout(() => setIndicateState((prev) => ({ ...prev, [workerId]: "indicated" })), 1500);
+      setIndicated((prev) => new Set(prev).add(key));
+      setTimeout(() => {
+        setIndicateState((prev) => ({ ...prev, [workerId]: "idle" }));
+      }, 1500);
     } else {
       setError({ ...error, [workerId]: data.error });
       setIndicateState((prev) => ({ ...prev, [workerId]: "idle" }));
     }
   };
 
+  const isIndicated = (workerId: string) => {
+    const jobId = selectedJob[workerId];
+    if (!jobId) return false;
+    return indicated.has(`${workerId}-${jobId}`);
+  };
+
   const renderIndicateButton = (worker: Worker) => {
     const state = indicateState[worker.id] || "idle";
+    const alreadyIndicated = isIndicated(worker.id);
+
     if (state === "loading") return (
       <div className="flex items-center gap-2 px-4 py-2 bg-jm-card-hover rounded-lg text-sm text-jm-text-secondary">
         <IconLoader2 size={14} className="animate-spin" />Procesando...
@@ -121,8 +139,10 @@ export default function CompanyWorkersPage() {
         <IconCheck size={14} />Trabajador indicado
       </div>
     );
-    if (state === "indicated") return (
-      <div className="px-4 py-2 bg-jm-card-hover rounded-lg text-sm text-jm-text-tertiary text-center">Ya indicado</div>
+    if (alreadyIndicated) return (
+      <div className="px-4 py-2 bg-jm-card-hover rounded-lg text-sm text-jm-text-tertiary text-center">
+        Ya indicado para esta oferta
+      </div>
     );
     return (
       <button onClick={() => handleIndicate(worker.id)}
@@ -148,7 +168,6 @@ export default function CompanyWorkersPage() {
         </div>
       )}
 
-      {/* Filtros — 1 columna en mobile, 2 desde sm, 4 desde md */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <select value={filters.categoryId} onChange={(e) => setFilters({ ...filters, categoryId: e.target.value })}
           className="bg-jm-card border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta hover:border-jm-magenta transition-colors cursor-pointer">
@@ -166,12 +185,9 @@ export default function CompanyWorkersPage() {
           {Object.entries(AVAILABILITY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
         <label className="flex items-center gap-2 bg-jm-card border border-jm-border rounded-lg px-3 py-2 cursor-pointer hover:border-jm-magenta transition-colors">
-          <input
-            type="checkbox"
-            checked={filters.hasCV === "true"}
+          <input type="checkbox" checked={filters.hasCV === "true"}
             onChange={(e) => setFilters({ ...filters, hasCV: e.target.checked ? "true" : "" })}
-            className="w-4 h-4 accent-jm-magenta cursor-pointer flex-shrink-0"
-          />
+            className="w-4 h-4 accent-jm-magenta cursor-pointer flex-shrink-0" />
           <span className="text-sm text-jm-text-secondary">Solo con CV cargado</span>
         </label>
       </div>
@@ -212,7 +228,8 @@ export default function CompanyWorkersPage() {
 
               {jobs.length > 0 && (
                 <div className="mt-4 flex flex-col gap-2">
-                  <select value={selectedJob[worker.id] || ""}
+                  <select
+                    value={selectedJob[worker.id] || ""}
                     onChange={(e) => setSelectedJob({ ...selectedJob, [worker.id]: e.target.value })}
                     className="bg-jm-card-hover border border-jm-border rounded-lg px-3 py-2 text-sm text-jm-text focus:outline-none focus:border-jm-magenta cursor-pointer">
                     <option value="">Seleccioná una oferta</option>
