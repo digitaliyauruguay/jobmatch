@@ -28,18 +28,20 @@ export async function GET(req: NextRequest) {
       },
       include: {
         workerProfile: {
-          select: {
-            firstName: true,
-            lastName: true,
-            department: true,
-          },
-        },
-        companyProfile: {
-          select: {
-            name: true,
-            department: true,
-          },
-        },
+  select: {
+    id: true,
+    firstName: true,
+    lastName: true,
+    department: true,
+  },
+},
+companyProfile: {
+  select: {
+    id: true,
+    name: true,
+    department: true,
+  },
+},
       },
       orderBy: { createdAt: "desc" },
     });
