@@ -170,7 +170,9 @@ export default function CompanyDashboard() {
       setJobActionState({ id: jobId, status: "success", label: "Oferta completada" });
       setTimeout(async () => {
         setJobActionState(null);
+        setJobFilter("COMPLETED"); // ← agregar
         await fetchJobs();
+        fetchApplications(jobId);  // ← agregar
       }, 1500);
     } else {
       setJobActionState(null);
