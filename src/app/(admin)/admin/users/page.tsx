@@ -41,9 +41,9 @@ type User = {
 type ActionState = { userId: string; status: "loading" | "success"; label: string } | null;
 
 const ACTION_LABELS: Record<string, string> = {
-  ACTIVE: "Acción realizada correctamente",
-  INACTIVE: "Acción realizada correctamente",
-  BLOCKED: "Acción realizada correctamente",
+  ACTIVE: "Aprobado correctamente",
+  INACTIVE: "Cuenta desactivada",
+  BLOCKED: "Cuenta bloqueada",
 };
 
 export default function AdminUsersPage() {
@@ -270,7 +270,7 @@ export default function AdminUsersPage() {
       <h1 className="text-xl font-medium text-jm-text mb-6">Gestión de usuarios</h1>
 
       {/* Filtros */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-2 mb-6 flex-wrap">
         {["PENDING", "ACTIVE", "INACTIVE", "BLOCKED"].map((s) => (
           <button
             key={s}

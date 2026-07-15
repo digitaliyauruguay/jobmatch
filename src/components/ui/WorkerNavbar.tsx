@@ -1,9 +1,8 @@
 /*
  * Archivo: src/components/ui/WorkerNavbar.tsx
  * Qué hace: Navbar flotante compartida para todas las páginas del
- * dashboard de trabajador. Muestra foto de perfil o avatar con
- * iniciales en magenta si no hay foto. Refresca la sesión cada
- * 15 segundos para detectar bloqueos/desactivaciones.
+ * dashboard de trabajador. En mobile muestra solo el avatar para
+ * no romper el layout. Refresca la sesión cada 15 segundos.
  */
 
 "use client";
@@ -66,17 +65,18 @@ export default function WorkerNavbar() {
               JobMatch
             </span>
           </Link>
-          <div className="flex items-center gap-4">
-            <Link href="/worker/profile/edit" className="flex items-center gap-3 cursor-pointer group">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Link href="/worker/profile/edit" className="flex items-center gap-2 cursor-pointer group">
               {profile?.photo ? (
                 <img src={profile.photo} alt="Foto de perfil"
-                  className="w-8 h-8 rounded-full object-cover border border-jm-border" />
+                  className="w-8 h-8 rounded-full object-cover border border-jm-border flex-shrink-0" />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-jm-magenta flex items-center justify-center text-white text-xs font-semibold">
+                <div className="w-8 h-8 rounded-full bg-jm-magenta flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
                   {initials}
                 </div>
               )}
-              <span className="text-sm text-jm-text-secondary group-hover:text-jm-magenta-light transition-colors">
+              {/* Nombre solo visible desde sm */}
+              <span className="hidden sm:block text-sm text-jm-text-secondary group-hover:text-jm-magenta-light transition-colors">
                 {displayName}
               </span>
             </Link>
@@ -84,7 +84,8 @@ export default function WorkerNavbar() {
             <button onClick={() => signOut({ callbackUrl: "/login" })}
               className="flex items-center gap-1.5 text-sm text-jm-text-tertiary hover:text-jm-text transition-colors cursor-pointer">
               <IconLogout size={16} />
-              Salir
+              {/* "Salir" solo visible desde sm */}
+              <span className="hidden sm:block">Salir</span>
             </button>
           </div>
         </div>

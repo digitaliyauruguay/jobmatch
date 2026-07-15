@@ -1,9 +1,8 @@
 /*
  * Archivo: src/components/ui/AdminNavbar.tsx
  * Qué hace: Navbar flotante compartida para todas las páginas del
- * panel de administración. Muestra el email del admin, notificaciones
- * y botón de salir. Se usa desde el layout de (admin) para no duplicar
- * esta lógica en cada página individual.
+ * panel de administración. En mobile oculta el email y muestra
+ * solo el logo + notificaciones + salir.
  */
 
 "use client";
@@ -21,23 +20,23 @@ export default function AdminNavbar() {
       <nav className="max-w-7xl mx-auto bg-jm-card/90 backdrop-blur-md border border-jm-border rounded-2xl">
         <div className="px-5 py-3 flex justify-between items-center">
           <Link href="/admin/dashboard" className="flex items-center gap-2 cursor-pointer group">
-            <IconBriefcase
-              size={22}
-              className="text-jm-magenta-light transition-transform duration-200 group-hover:scale-110 group-hover:rotate-[-6deg]"
-            />
+            <IconBriefcase size={22}
+              className="text-jm-magenta-light transition-transform duration-200 group-hover:scale-110 group-hover:rotate-[-6deg]" />
             <span className="text-lg font-medium text-jm-text transition-colors duration-200 group-hover:text-jm-magenta-light">
-              JobMatch Admin
+              JobMatch
+              <span className="hidden sm:inline"> Admin</span>
             </span>
           </Link>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-jm-text-secondary">{session?.user?.email}</span>
+          <div className="flex items-center gap-2 sm:gap-4">
+            {/* Email solo visible desde sm */}
+            <span className="hidden sm:block text-sm text-jm-text-secondary truncate max-w-[200px]">
+              {session?.user?.email}
+            </span>
             <NotificationBell />
-            <button
-              onClick={() => signOut({ callbackUrl: "/login" })}
-              className="flex items-center gap-1.5 text-sm text-jm-text-tertiary hover:text-jm-text transition-colors cursor-pointer"
-            >
+            <button onClick={() => signOut({ callbackUrl: "/login" })}
+              className="flex items-center gap-1.5 text-sm text-jm-text-tertiary hover:text-jm-text transition-colors cursor-pointer">
               <IconLogout size={16} />
-              Salir
+              <span className="hidden sm:block">Salir</span>
             </button>
           </div>
         </div>
