@@ -160,7 +160,7 @@ export default function NotificationBell() {
 
                   {/* Contenido */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-jm-text leading-snug">{n.message}</p>
+                    <p className="text-sm text-jm-text leading-snug break-words">{n.message}</p>
                     <p className="text-xs text-jm-text-tertiary mt-1">
                       {formatDate(n.createdAt)}
                     </p>
