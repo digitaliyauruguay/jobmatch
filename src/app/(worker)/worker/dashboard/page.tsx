@@ -10,7 +10,8 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import {
@@ -66,6 +67,18 @@ const DEPARTMENT_LABELS: Record<string, string> = {
 };
 
 export default function WorkerDashboard() {
+  // useSearchParams necesita un Suspense boundary para no romper el build de Vercel.
+  return (
+    <Suspense fallback={null}>
+      <WorkerDashboardInner />
+    </Suspense>
+  );
+}
+
+function WorkerDashboardInner() {
+  const searchParams = useSearchParams();
+  const jobIdDestacado = searchParams.get("jobId");
+
   const [activeSection, setActiveSection] = useState<"jobs" | "applications">("jobs");
   const [profile, setProfile] = useState<{ firstName: string; photo: string | null; cvUrl: string | null } | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -123,6 +136,14 @@ export default function WorkerDashboard() {
 
   useEffect(() => { fetchJobs(); }, [filters]);
   useEffect(() => { if (activeSection === "applications") fetchApplications(); }, [activeSection]);
+
+  // Si venimos de un link del agente de IA con ?jobId=..., hacer scroll hasta
+  // esa oferta específica en cuanto la lista termine de cargar.
+  useEffect(() => {
+    if (!jobIdDestacado || loadingJobs) return;
+    const el = document.getElementById(`job-${jobIdDestacado}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [jobIdDestacado, loadingJobs, jobs]);
 
   const handleApply = async (jobId: string) => {
     setApplyState((prev) => ({ ...prev, [jobId]: "loading" }));
@@ -245,7 +266,15 @@ export default function WorkerDashboard() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {jobs.map((job) => (
-                  <div key={job.id} className="bg-jm-card border border-jm-border rounded-lg p-5">
+                  <div
+                    key={job.id}
+                    id={`job-${job.id}`}
+                    className={`bg-jm-card border rounded-lg p-5 transition-colors ${
+                      job.id === jobIdDestacado
+                        ? "border-jm-magenta ring-2 ring-jm-magenta/40"
+                        : "border-jm-border"
+                    }`}
+                  >
                     <p className="font-medium text-jm-text">{job.title}</p>
                     <p className="text-sm text-jm-text-secondary mt-0.5">{job.company.name} · {DEPARTMENT_LABELS[job.department]}</p>
                     <div className="flex flex-wrap gap-2 mt-2">
