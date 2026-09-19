@@ -1,14 +1,12 @@
 /*
  * Archivo: src/components/ui/ChatbotWidget.tsx
  * Qué hace: Botón flotante de chat con el asistente de IA de JobMatch.
- * Aparece fijo en la esquina inferior derecha; al hacer click abre/cierra
- * un panel de chat que habla con /api/agent. Mantiene el estilo visual
- * (colores jm-*, iconos tabler) del resto de la app.
+ * Mismo componente para trabajadores y empresas — el endpoint /api/agent
+ * ya decide qué tools usar según el rol logueado, así que el widget no
+ * necesita saber nada de eso.
  *
- * Se monta desde el layout de trabajador, así que solo aparece para
- * usuarios logueados con rol WORKER (la ruta ya está protegida por
- * middleware.ts). Si más adelante querés mostrarlo también a empresas,
- * importalo de la misma forma en (company)/layout.tsx.
+ * Cambio respecto a la versión anterior: renderConEnlaces ahora reconoce
+ * también links a /company/dashboard, además de /worker/dashboard?jobId=.
  */
 "use client";
 
@@ -18,11 +16,10 @@ import { IconMessageChatbot, IconX, IconSend } from "@tabler/icons-react";
 
 type ChatMsg = { role: "user" | "assistant"; text: string };
 
-// Detecta rutas internas tipo "/worker/dashboard?jobId=..." dentro del texto
-// del agente y las convierte en links clickeables (navegación de Next.js,
-// sin recargar la página). El resto del texto se muestra tal cual.
+// Detecta rutas internas dentro del texto del agente y las convierte en
+// links clickeables (navegación de Next.js, sin recargar la página).
 function renderConEnlaces(texto: string) {
-  const patronEnlace = /\/worker\/dashboard\?jobId=[A-Za-z0-9_-]+/g;
+  const patronEnlace = /\/(?:worker|company)\/dashboard\?jobId=[A-Za-z0-9_-]+/g;
   const partes = texto.split(patronEnlace);
   const enlaces = texto.match(patronEnlace) ?? [];
 
@@ -35,7 +32,7 @@ function renderConEnlaces(texto: string) {
           href={enlaces[i]}
           className="text-jm-cyan-light underline hover:text-jm-cyan-light/80"
         >
-          Ver oferta →
+          Ver más →
         </Link>
       );
     }
@@ -48,7 +45,7 @@ export default function ChatbotWidget() {
   const [mensajes, setMensajes] = useState<ChatMsg[]>([
     {
       role: "assistant",
-      text: "¡Hola! Preguntame por ofertas de trabajo — por ejemplo \"¿hay trabajos de gastronomía en Montevideo?\".",
+      text: "¡Hola! ¿En qué te puedo ayudar?",
     },
   ]);
   const [input, setInput] = useState("");

@@ -7,6 +7,7 @@
  */
 
 import CompanyNavbar from "@/components/ui/CompanyNavbar";
+import ChatbotWidget from "@/components/ui/ChatbotWidget";
 
 export default function CompanyLayout({
   children,
@@ -17,6 +18,7 @@ export default function CompanyLayout({
     <div className="min-h-screen bg-jm-black">
       <CompanyNavbar />
       {children}
+      <ChatbotWidget />
     </div>
   );
 }

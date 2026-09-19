@@ -12,7 +12,8 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
@@ -100,6 +101,17 @@ function FeedbackChip({ state }: { state: ActionState }) {
 }
 
 export default function CompanyDashboard() {
+  return (
+    <Suspense fallback={null}>
+      <CompanyDashboardInner />
+    </Suspense>
+  );
+}
+
+function CompanyDashboardInner() {
+  const searchParams = useSearchParams();
+  const jobIdDestacado = searchParams.get("jobId");
+
   const [jobs, setJobs] = useState<Job[]>([]);
   const [selectedJob, setSelectedJob] = useState<string | null>(null);
   const [applications, setApplications] = useState<Application[]>([]);
@@ -145,6 +157,23 @@ export default function CompanyDashboard() {
     setAppActionState(null);
     if (jobStatus === "ACTIVE") fetchApplications(jobId);
   };
+
+  // Si se llegó acá desde un link del agente de IA (?jobId=...), seleccionar
+  // esa oferta apenas terminan de cargar, poniendo el filtro que corresponda
+  // para que sea visible aunque no esté entre las activas, e ir hasta su
+  // tarjeta en la lista.
+  useEffect(() => {
+    if (!jobIdDestacado || loadingJobs) return;
+    const job = jobs.find((j) => j.id === jobIdDestacado);
+    if (!job) return;
+
+    setJobFilter(job.status as "ACTIVE" | "BLOCKED" | "DELETED" | "COMPLETED");
+    handleSelectJob(job.id, job.status);
+
+    const el = document.getElementById(`job-${job.id}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobIdDestacado, loadingJobs, jobs]);
 
   const handleDeleteJob = async (jobId: string) => {
     if (!confirm("¿Estás seguro de eliminar esta oferta? Esta acción no se puede deshacer.")) return;
@@ -253,7 +282,7 @@ export default function CompanyDashboard() {
           ) : (
             <div className="flex flex-col gap-2">
               {visibleJobs.map((job) => (
-                <div key={job.id} className="bg-jm-card rounded-lg p-4 transition-colors"
+                <div key={job.id} id={`job-${job.id}`} className="bg-jm-card rounded-lg p-4 transition-colors"
                   style={{ border: selectedJob === job.id ? "1px solid #993556" : "1px solid #232229" }}>
                   <button onClick={() => handleSelectJob(job.id, job.status)} className="text-left w-full cursor-pointer">
                     <div className="flex justify-between items-start gap-2">

@@ -226,6 +226,19 @@ model Notification {
   user   User   @relation(fields: [userId], references: [id])
 }
 
+// Base de conocimiento editable para el asistente de IA: reglas, respuestas
+// a preguntas frecuentes o informacion propia de JobMatch que el agente
+// puede consultar sin necesidad de tocar el codigo. Se administra con los
+// scripts de scripts/conocimiento-*.ts (o una futura pantalla de admin).
+model AgentKnowledge {
+  id        String   @id @default(cuid())
+  tema      String
+  contenido String
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Observation {
   id         String            @id @default(cuid())
   message    String
